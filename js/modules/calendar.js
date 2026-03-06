@@ -189,17 +189,6 @@ async function renderGrid(viewDate, lat = 0, lon = 0) {
     const month = viewDate.getMonth();
     const selectedDay = viewDate.getDate(); // 当前选中的天
     
-    const gridKey = `${year}-${month}-${selectedDay}-${lat}-${lon}`;
-    if (gridKey === lastRenderedGridKey) return;
-    
-    const firstDayObj = new Date(year, month, 1);
-    const firstDayOfWeek = firstDayObj.getDay(); 
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
-    const now = new Date();
-    const isCurrentMonthReal = now.getFullYear() === year && now.getMonth() === month;
-    const realToday = now.getDate();
-
     const viewLunar = getLunarDate(viewDate);
     const yiData = getYiCalendarDate(viewDate);
 
@@ -211,16 +200,30 @@ async function renderGrid(viewDate, lat = 0, lon = 0) {
         UI.calTitleDate.innerHTML = `${year}年${mStr}月${dStr}日 <span class="cal-title-sub">${viewLunar.monthName}</span> <span class="yi-title-stamp el-${yiData.wuxing}">${yiData.monthName}</span>`;
     }
 
+    const gridKey = `${year}-${month}-${lat}-${lon}`;
+    if (gridKey === lastRenderedGridKey) {
+        // 仅更新选中状态
+        const days = UI.calGrid.querySelectorAll('.c-day:not(.empty)');
+        days.forEach(dayEl => {
+            if (parseInt(dayEl.dataset.day) === selectedDay) {
+                dayEl.classList.add('selected');
+            } else {
+                dayEl.classList.remove('selected');
+            }
+        });
+        return;
+    }
+    
+    const firstDayObj = new Date(year, month, 1);
+    const firstDayOfWeek = firstDayObj.getDay(); 
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const now = new Date();
+    const isCurrentMonthReal = now.getFullYear() === year && now.getMonth() === month;
+    const realToday = now.getDate();
+
     const wangDatesStr = findWangDates(viewDate);
     
-    // 获取本月日月食数据
-    let eclipses = [];
-    try {
-        eclipses = await fetchEclipsesForMonth(year, month, lat, lon);
-    } catch (e) {
-        console.warn("Error fetching eclipses for calendar grid:", e);
-    }
-
     let html = '';
     
     for(let i=0; i<firstDayOfWeek; i++) {
@@ -235,12 +238,8 @@ async function renderGrid(viewDate, lat = 0, lon = 0) {
         const moonInfo = getGridMoonInfo(cellDate, lunarData, wangDatesStr);
         
         // 2. 预计算吉凶 (Grid Indicators)
-        // 快速计算日支 (不跑完整的 Bazi 排盘，只算日)
         const dayGZ = ganzhiDayFromGregorianDate(year, month + 1, d);
         const xiuName = calculateSanHeXiu(cellDate, dayGZ.zhi);
-        // 为了 grid 渲染速度，我们需要一个快速的 lunarStatus，复用 getGridMoonInfo 里的逻辑？
-        // 其实 checkMieMo 需要具体的 isShuo/isWang 等状态。
-        // getLunarPhaseStatus 函数开销稍大，但对于30天来说应该可以接受
         const lunarStatus = getLunarPhaseStatus(cellDate);
         const mieMoResult = checkMieMo(xiuName, lunarStatus);
         
@@ -261,14 +260,8 @@ async function renderGrid(viewDate, lat = 0, lon = 0) {
             tlHtml = `<div class="omen-marker" title="${mieMoResult}"></div>`;
         }
         
-        // 检查是否有日月食
-        const cellDateStr = new Date(cellDate.getTime() + 8*3600*1000).toISOString().split('T')[0];
-        const dayEclipses = eclipses.filter(e => e.dateStr === cellDateStr);
-        let brHtml = '';
-        if (dayEclipses.length > 0) {
-            const eclipseTitles = dayEclipses.map(e => `${e.name} (${e.startDate.toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'})} - ${e.endDate.toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'})})`).join('&#10;');
-            brHtml = `<div class="eclipse-marker" title="${eclipseTitles}"></div>`;
-        }
+        // 日月食标记占位符
+        let brHtml = `<div class="eclipse-placeholder" data-date="${new Date(cellDate.getTime() + 8*3600*1000).toISOString().split('T')[0]}"></div>`;
 
         html += `
         <div class="${classes}" data-day="${d}" data-year="${year}" data-month="${month}">
@@ -282,6 +275,26 @@ async function renderGrid(viewDate, lat = 0, lon = 0) {
     
     UI.calGrid.innerHTML = html;
     lastRenderedGridKey = gridKey;
+
+    // 异步获取本月日月食数据并更新 DOM
+    setTimeout(async () => {
+        try {
+            const eclipses = await fetchEclipsesForMonth(year, month, lat, lon);
+            if (eclipses.length > 0) {
+                const placeholders = UI.calGrid.querySelectorAll('.eclipse-placeholder');
+                placeholders.forEach(el => {
+                    const cellDateStr = el.dataset.date;
+                    const dayEclipses = eclipses.filter(e => e.dateStr === cellDateStr);
+                    if (dayEclipses.length > 0) {
+                        const eclipseTitles = dayEclipses.map(e => `${e.name} (${e.startDate.toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'})} - ${e.endDate.toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'})})`).join('&#10;');
+                        el.outerHTML = `<div class="eclipse-marker" title="${eclipseTitles}"></div>`;
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn("Error fetching eclipses for calendar grid:", e);
+        }
+    }, 10);
 }
 
 function updateAstronomyData(date, lat, lon) {
