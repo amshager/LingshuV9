@@ -1,0 +1,1012 @@
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Serif+SC:wght@300;500;700&display=swap');
+
+:root {
+    /* --- 皇家占星师 / 中世纪手稿风格 --- */
+    
+    /* 背景体系：深色木纹/案台色 -> 羊皮纸色 */
+    --bg-base: #2c241b;          /* 网页背景：深胡桃木色/暗褐 */
+    --bg-card: #f3e5d0;          /* 卡片背景：羊皮纸原色 */
+    
+    /* 日历格子：做旧纸张质感 */
+    --cell-bg-top: #fbf6ec;      /* 纸张高光 */
+    --cell-bg-bot: #ebdcc1;      /* 纸张阴影 */
+    --cell-border: #a89f91;      /* 墨水线条/做旧边框 */
+    
+    /* 文字体系：墨色与朱砂 */
+    --text-main: #2b1b17;        /* 主文字：深墨褐 (接近黑但更柔和) */
+    --text-sub: #5d4037;         /* 次要文字：赭石色 */
+    
+    /* 强调色：宫廷配色 */
+    --gold-main: #bfa45f;        /* 哑光古金 */
+    --gold-dim: #8c7335;         /* 暗金 */
+    --red-vivid: #b71c1c;        /* 朱砂红/印泥红 */
+    
+    /* 月相颜色：青金石蓝 (Lapis Lazuli) */
+    --c-moon: #1a237e;           /* 深邃的皇室蓝 */
+    --c-moon-glow: rgba(26, 35, 126, 0.15);
+
+    /* 五行颜色 (高亮荧光感) */
+    --c-jin: #ffb300; /* 琥珀金 */
+    --c-mu:  #00c853; /* 荧光绿 */
+    --c-shui: #2979ff; /* 荧光蓝 */
+    --c-huo: #ff1744; /* 荧光红 */
+    --c-tu:  #8d6e63; /* 赭石 */
+    
+    --app-width: 960px;
+    --border-lite: #d7ccc8; /* 浅褐分隔线 */
+    --border-color: #cbbba5; /* 边框色 */
+    --bg-panel: #fbf6ec; /* 面板背景色 */
+}
+
+@font-face { font-family: 'Song'; src: local("Noto Serif SC"), local("Source Han Serif SC"), local("STSong"), serif; }
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+    background: var(--bg-base); 
+    font-family: 'Noto Serif SC', 'Song', serif; 
+    /* 移动端视口修复：使用 dvh (Dynamic Viewport Height) 自动适应地址栏 */
+    min-height: 100dvh; 
+    display: flex; justify-content: center; align-items: center;
+    color: var(--text-main);
+    overflow: hidden; 
+}
+
+#app-container {
+    width: 100%; 
+    /* 移动端视口修复：确保容器高度严格等于可见区域 */
+    height: 100dvh; 
+    background: var(--bg-card);
+    display: flex; flex-direction: column; 
+    overflow: hidden; position: relative;
+}
+
+@media (min-width: 961px) {
+    #app-container {
+        width: var(--app-width); height: 90vh; max-height: 900px;
+        border-radius: 4px; border: 4px solid #1a1510; 
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
+    }
+}
+
+/* 顶部栏 */
+.control-header {
+    flex: 0 0 44px;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 12px; 
+    background: #e6d5bc; 
+    border-bottom: 1px solid #cbbba5;
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(44, 27, 23, 0.1);
+}
+.gps-status { display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; min-width: 0; }
+.gps-dot { width: 8px; height: 8px; background: #a1887f; border-radius: 50%; border: 1px solid #5d4037; flex-shrink: 0; } 
+/* 自动定位：绿色 */
+.gps-dot.active { background: var(--c-mu); box-shadow: none; border-color: #1b5e20; }
+/* 手动定位：琥珀色 */
+.gps-dot.manual { background: var(--c-jin); box-shadow: none; border-color: #f57f17; }
+
+.gps-info { display: flex; flex-direction: column; font-size: 0.6rem; font-family: 'JetBrains Mono'; color: var(--text-sub); font-weight: bold; overflow: hidden; }
+/* 增加省略号支持，防止区县名过长 */
+.gps-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: "Song", serif; letter-spacing: 0.5px; }
+
+/* 中间：品牌名 */
+.brand-title-top {
+    flex: 0 0 auto;
+    font-family: 'Song', serif; 
+    font-weight: 900; 
+    font-size: 1.2rem; 
+    color: var(--red-vivid); 
+    letter-spacing: 4px;
+    margin-right: -4px; 
+    opacity: 0.9;
+}
+
+.action-group { display: flex; gap: 12px; justify-content: flex-end; flex: 1; }
+.icon-btn {
+    background: transparent; border: 1px solid #bcaaa4; color: var(--text-main);
+    width: 28px; height: 28px; border-radius: 2px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+}
+.icon-btn:active { background: #d7ccc8; transform: translateY(1px); }
+.icon-btn.tiny { width: 24px; height: 24px; border-color: transparent; }
+.icon-btn.tiny svg { width: 14px; height: 14px; }
+.icon-btn svg { width: 18px; height: 18px; }
+
+/* HUD - 仪表盘区域 */
+.dashboard-header {
+    flex: 0 0 auto;
+    display: flex;
+    position: relative;
+    background: linear-gradient(180deg, #fdf6e8 0%, #f3e5d0 100%); 
+    border-bottom: 1px solid var(--border-lite); 
+    /* 高度调整：保持之前的加厚 */
+    height: 22vh; min-height: 156px; max-height: 200px;
+    overflow: hidden;
+    color: var(--text-main);
+}
+.hud-left-compass {
+    /* 防抖动关键 1：强制 flex-basis 生效，忽略内容宽度 */
+    flex: 382 1 0%; 
+    min-width: 0; /* 允许压缩到 0，防止被右侧挤压 */
+    
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border-right: 1px solid var(--border-lite); padding: 5px;
+    padding-top: 18px; 
+    background: rgba(255,255,255,0.2);
+    position: relative; 
+    overflow: visible; 
+    z-index: 20; 
+}
+/* 罗盘样式 */
+.compass-widget {
+    width: 99px; height: 99px; 
+    border: 3px solid #b8860b; 
+    border-radius: 50%;
+    position: relative; background: #e0d0b6; 
+    box-shadow: inset 0 0 10px rgba(184, 134, 11, 0.2); 
+    margin-bottom: 12px; 
+    flex-shrink: 0;
+    overflow: visible; 
+}
+/* 确保 ring 绝对定位，防止挤压 siblings */
+.cw-ring { 
+    position: absolute; top:0; left:0;
+    width: 100%; height: 100%; 
+    transition: transform 0.1s linear; 
+}
+
+.cw-shan { 
+    position: absolute; top: 0; left: 50%; width: 14px; margin-left: -7px; height: 50%; 
+    transform-origin: bottom center; font-size: 0.55rem; 
+    color: #4e342e; 
+    font-weight: 900; 
+    padding-top: 2px; text-align: center; line-height: 1.1; 
+}
+
+.cw-divider { 
+    position: absolute; 
+    top: 0; 
+    left: 50%; 
+    height: 50%;
+    transform-origin: bottom center; 
+    width: 0px; 
+    background: transparent; 
+}
+
+/* 
+ * 八宫线 (.cardinal) 独立显色
+ */
+.cw-divider.cardinal { 
+    background: #8c7335; 
+    z-index: 5; 
+    height: 52%; 
+    top: -2%; 
+    width: 1.5px; 
+    opacity: 0.9; 
+    display: block; 
+}
+
+.cw-cross-v { 
+    position: absolute; top: -8px; left: 50%; width: 1px; height: calc(100% + 16px); 
+    background: var(--red-vivid); 
+    transform: translateX(-50%); pointer-events: none; z-index: 10;
+    opacity: 0.85;
+    box-shadow: 0 0 2px rgba(183, 28, 28, 0.4); 
+}
+.cw-cross-h { 
+    position: absolute; top: 50%; left: -8px; width: calc(100% + 16px); height: 1px; 
+    background: var(--red-vivid); 
+    transform: translateY(-50%); pointer-events: none; z-index: 10;
+    opacity: 0.85;
+    box-shadow: 0 0 2px rgba(183, 28, 28, 0.4);
+}
+
+/* 倒三角箭头 -> 改回正三角 (Upright Triangle △) */
+.cw-heading-marker {
+    position: absolute; 
+    top: -16px; 
+    left: 50%; 
+    width: 0; 
+    height: 0;
+    border-left: 5px solid transparent; 
+    border-right: 5px solid transparent; 
+    /* 底部有边框颜色，顶部无，构成正三角形 */
+    border-bottom: 10px solid var(--c-moon); 
+    border-top: none; 
+    transform: translateX(-50%); 
+    z-index: 25; 
+    background: none; 
+    box-shadow: none; 
+    border-radius: 0;
+    pointer-events: none;
+}
+
+/* 确保水平仪居中 */
+.cw-level-area { 
+    position: absolute; 
+    top: 50%; left: 50%; 
+    width: 12px; height: 12px; 
+    transform: translate(-50%, -50%); 
+    border: 1px solid #8c7335; 
+    border-radius: 50%; 
+    background: rgba(243, 229, 208, 0.9); 
+    display: flex; align-items: center; justify-content: center; 
+    z-index: 15; 
+    margin: 0; padding: 0;
+}
+
+.cw-level-dot { width: 4px; height: 4px; background: #4e342e; border-radius: 50%; }
+.cw-level-dot.centered { background: var(--red-vivid); }
+.degree-display { font-family: 'JetBrains Mono'; font-size: 0.8rem; color: var(--text-main); white-space: nowrap; font-weight: bold; margin-top: 6px; }
+
+/* 品牌中轴 -> 节气显示 */
+/* 用户指定覆盖样式 */
+.hud-center-pivot {
+    position: absolute;
+    /* 位置修正：锚定到父容器右侧边缘 */
+    right: 0; 
+    top: 63%; 
+    /* 
+     * transform 解析：
+     * translate(50%, -50%) 
+     * 改为 70% 向右偏移
+     */
+    transform: translate(70%, -50%);
+    display: flex; flex-direction: column; align-items: center; gap: 0;
+    background: #fbf6ec; 
+    padding: 1px 2px; 
+    border-radius: 3px; border: 1px solid #a1887f;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1); 
+    z-index: 100; /* 确保在最上层 */
+    transition: all 1.3s ease;
+    white-space: nowrap; /* 防止内容意外换行 */
+}
+/* 节气字体 */
+.hud-center-pivot span {
+    font-family: 'Song', serif; 
+    font-weight: 900; 
+    font-size: 1.0rem; 
+    color: var(--text-main); 
+    line-height: 1.1; 
+}
+
+/* 节气季节颜色 */
+.hud-center-pivot.season-wood span { color: var(--c-mu); }
+.hud-center-pivot.season-fire span { color: var(--c-huo); }
+.hud-center-pivot.season-metal span { color: var(--c-jin); } 
+.hud-center-pivot.season-water span { color: var(--c-shui); }
+
+
+.hud-right-time {
+    /* 防抖动关键 2：强制 flex-basis 生效，忽略内容宽度 */
+    flex: 618 1 0%; 
+    min-width: 0; /* 允许压缩，防止内容撑开导致分界线移动 */
+    
+    display: flex; flex-direction: column; 
+    padding: 8px 12px;
+}
+
+.time-group {
+    flex: 0 0 auto; display: flex; flex-direction: column; justify-content: flex-end;
+    padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--border-lite);
+    /* 增加 overflow hidden 以防时间文字过长撑开容器 */
+    overflow: hidden;
+}
+
+/* 真太阳时与节气信息 */
+.ts-row {
+    display: flex; 
+    align-items: center; /* 垂直居中对齐 */
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+.ts-time {
+    font-family: 'Song', serif; font-weight: bold; color: var(--text-main); 
+    
+    /* 字体调整：缩小至 1.35rem 确保窄屏显示 */
+    font-size: 1.7rem; 
+    /* 宽度锁定：极度紧凑 (00:00:00 约 4.5em) */
+    min-width: 3.5em;
+    /* 数字等宽 + 紧缩字间距 */
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+    
+    line-height: 1; 
+    white-space: nowrap;
+}
+
+/* 节气时间信息 */
+.term-info-box {
+    display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+    margin-left: 6px; margin-bottom: 0;
+    /* 确保右侧信息能自适应剩余空间，不被挤出去 */
+    flex: 1;
+    min-width: 0; 
+}
+.ti-line {
+    display: flex; gap: 4px; align-items: baseline;
+    line-height: 1.25;
+    white-space: nowrap; 
+}
+.ti-name {
+    font-family: "Song", serif; font-weight: bold; 
+    color: var(--text-main);
+    font-size: 0.7rem;
+    width: 2em; text-align: justify; text-align-last: justify;
+}
+.ti-time {
+    font-family: 'JetBrains Mono'; font-size: 0.65rem; color: var(--text-sub);
+}
+
+
+/* 辅助信息行：时间、Delta、七十二候 */
+.legal-row {
+    display: flex; align-items: baseline; 
+    /* 间距由 8px 缩减至 3px，极度紧凑 */
+    gap: 3px; 
+    font-size: 0.8rem; color: var(--text-sub); font-family: 'JetBrains Mono'; flex-wrap: nowrap;
+    overflow: hidden; /* 防止撑开 */
+}
+.delta-info { 
+    color: var(--gold-dim); font-style: italic; 
+    /* 缩小 Delta 字体 */
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+
+/* 七十二候样式 */
+.pentad-info {
+    font-family: 'Song', serif; 
+    color: var(--text-main); 
+    font-weight: 500;
+    font-size: 0.85rem; 
+    margin-left: 4px; /* 减小左边距 */
+    opacity: 0.9;
+    overflow: hidden;
+    text-overflow: ellipsis; /* 极端情况省略 */
+}
+
+.gz-group {
+    flex: 1; display: flex; align-items: center; justify-content: space-between; padding-top: 0;
+}
+.pillar-item { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; }
+.gz-char { font-family: 'Song', serif; font-weight: bold; line-height: 1.1; font-size: 1.6rem; color: var(--text-main); }
+.nayin-sub { font-family: 'Song', serif; font-size: 0.75rem; color: var(--text-sub); margin-top: 4px; white-space: nowrap; transform: scale(0.9); font-weight: 500; }
+
+.el-jin  { color: var(--c-jin); }
+.el-mu   { color: var(--c-mu); }
+.el-shui { color: var(--c-shui); }
+.el-huo  { color: var(--c-huo); }
+.el-tu   { color: var(--c-tu); }
+
+/* 主区域 */
+.main-content {
+    flex: 1; display: flex; flex-direction: column; padding: 0; background: var(--bg-card);
+    overflow-y: auto; overflow-x: hidden; min-height: 0; position: relative;
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+.main-content::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+}
+
+/* 日历区域 */
+.cal-container {
+    flex: 1 0 auto; 
+    background: var(--bg-card); 
+    display: flex; flex-direction: column; padding: 8px 10px;
+    border-top: 1px solid #cbbba5;
+    min-height: 320px;
+    position: relative; 
+}
+
+/* 日历头 - 紧凑化 */
+.cal-header-row { 
+    display: flex; justify-content: space-between; align-items: center; 
+    margin-bottom: 2px; /* 减小下边距 */
+    padding: 0 4px; 
+    height: 28px; /* 减小高度 */
+    flex: 0 0 auto; z-index: 1; 
+}
+#cal-title-year-month { 
+    font-family: 'Song', serif; font-size: 1.1rem; color: var(--text-main); font-weight: 900; 
+    border-left: 3px solid var(--red-vivid); padding-left: 10px; line-height: 1.2;
+    display: flex; align-items: baseline; gap: 8px; /* 增加 Flex 布局确保三历并排 */
+}
+
+/* 农历与彝历在标题中的样式 */
+.cal-title-sub {
+    font-size: 1.1rem; /* 统一字号 */
+    color: var(--text-main);
+    font-weight: 900;
+}
+
+/* 彝历印章风格 */
+.yi-title-stamp {
+    font-family: 'Song', serif;
+    font-weight: 900;
+    font-size: 1.1rem; /* 统一字号 */
+    line-height: 1;
+    padding: 1px 5px;
+    border: 2px solid currentColor; /* 边框跟随五行色 */
+    border-radius: 3px;
+    white-space: nowrap;
+    opacity: 1;
+}
+
+.stepper-group { display: flex; align-items: center; gap: 0; background: transparent; padding: 0; border: none; }
+.step-select { background: transparent; border: none; color: var(--text-main); font-size: 0.8rem; outline: none; padding: 0 4px; text-align: right; appearance: none; font-weight: bold; font-family: 'Song', serif; cursor: pointer; }
+.step-select option { background: #fff8e1; color: #000; }
+
+/* 星期栏 - 紧凑化 */
+.cal-week-head { 
+    display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; 
+    color: var(--text-sub); font-size: 0.65rem; /* 稍微调小字号 */
+    margin-bottom: 2px; /* 减小下边距 */
+    font-weight: bold; 
+    flex: 0 0 auto; z-index: 1; border-bottom: 2px solid var(--text-main); padding-bottom: 2px;
+}
+
+/* 日历网格 */
+.cal-grid { 
+    flex: 1; display: grid; 
+    grid-template-columns: repeat(7, 1fr); 
+    grid-template-rows: repeat(6, min-content);
+    align-content: start;
+    gap: 3px;
+    min-height: 0; z-index: 1;
+    position: relative;
+}
+
+/* 单元格 */
+.c-day { 
+    position: relative; 
+    width: 100%; height: auto;
+    aspect-ratio: 1.05; 
+    background: linear-gradient(180deg, var(--cell-bg-top) 0%, var(--cell-bg-bot) 100%);
+    border: 1px solid var(--cell-border);
+    border-radius: 2px;
+    color: var(--text-main);
+    cursor: pointer; 
+    overflow: hidden;
+    display: block; 
+    box-shadow: 1px 1px 2px rgba(44, 27, 23, 0.1);
+    transition: all 0.1s ease-out;
+}
+.c-day.empty { background: transparent; border: none; box-shadow: none; pointer-events: none; }
+
+.c-day:not(.empty):hover { 
+    background: #fff; border-color: var(--text-main); 
+    transform: translateY(-1px); 
+    box-shadow: 2px 2px 4px rgba(44, 27, 23, 0.2);
+    z-index: 10;
+}
+
+.c-day.today {
+    border: 1.5px solid var(--red-vivid);
+    background: #fffbf0; 
+}
+.c-day.today .c-center { 
+    color: var(--red-vivid); font-weight: 700;
+}
+
+.c-day.selected {
+    border-color: var(--gold-dim); 
+    background: #fffde7; 
+    box-shadow: inset 0 0 0 2px var(--gold-main); 
+}
+.c-day.selected .c-corner.bl { color: var(--gold-dim); font-weight: bold; }
+
+/* 布局元素 */
+.c-corner { position: absolute; z-index: 5; pointer-events: none; }
+
+.c-corner.tr { 
+    top: 3px; right: 3px; 
+    display: flex; gap: 1px; align-items: center;
+    z-index: 6;
+} 
+
+.c-corner.tl {
+    top: 3px; left: 3px;
+    display: flex; align-items: center; justify-content: center;
+}
+.omen-marker {
+    width: 5px; height: 5px;
+    background: var(--red-vivid);
+    border-radius: 50%;
+    box-shadow: 0 0 2px rgba(183, 28, 28, 0.5); 
+}
+
+.moon-txt-small { 
+    font-size: 0.6rem; 
+    color: var(--text-sub); 
+    margin-right: 1px; 
+    font-family: "Song", serif; 
+    line-height: 1;
+}
+
+.moon-icon-svg { width: 12px; height: 12px; fill: var(--c-moon); }
+
+.c-corner.bl { 
+    bottom: 3px; left: 0; width: 100%;
+    text-align: center; 
+    font-family: "Song", serif; 
+    color: #8d6e63; 
+    font-size: 0.65rem; 
+    line-height: 1;
+    font-weight: 500;
+}
+
+.c-corner.br {
+    bottom: 3px; right: 3px;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.eclipse-marker {
+    width: 6px; height: 6px;
+    background: var(--gold-dim);
+    border-radius: 50%;
+    box-shadow: 0 0 3px var(--gold-dim);
+}
+
+.c-center {
+    position: absolute; 
+    top: 50%; left: 50%; 
+    transform: translate(-50%, -50%); 
+    font-family: 'Song', serif; 
+    font-size: 1.1rem; 
+    color: #4e342e; 
+    font-weight: 400;
+    opacity: 0.9;
+}
+
+@media (max-width: 400px) {
+    .cal-grid { gap: 2px; }
+    .c-center { font-size: 1.0rem; }
+    .moon-txt-small { font-size: 0.55rem; }
+    .moon-icon-svg { width: 10px; height: 10px; }
+    .c-corner.bl { font-size: 0.6rem; bottom: 2px; }
+    .c-corner.tr { top: 2px; right: 2px; }
+}
+
+.lbl-wang { color: var(--red-vivid); font-weight: 900; } 
+.lbl-shuo { color: var(--text-main); font-weight: bold; } 
+.lbl-hui  { color: var(--text-sub); opacity: 0.7; } 
+.lbl-ying { color: var(--c-moon); font-weight: bold; } 
+.lbl-xu   { color: #a1887f; } 
+.lbl-xian { color: var(--c-shui); } 
+
+/* 天文数据区 */
+.astro-data-box {
+    background: #fbf6ec; 
+    border-top: 1px solid #cbbba5; border-bottom: 1px solid #cbbba5;
+    padding: 6px 0; 
+    flex: 0 0 auto; 
+    font-family: "Song", serif;
+    position: relative; z-index: 2; 
+    color: var(--text-main);
+    display: flex; flex-direction: column;
+}
+
+.astro-header-labels {
+    display: flex; align-items: center; 
+    padding: 2px 0 4px 0; 
+    border-bottom: 1px solid #d7ccc8;
+    margin-bottom: 2px;
+}
+
+.astro-row {
+    display: flex; align-items: center; 
+    padding: 2px 0; 
+}
+
+.ah-col, .astro-cell {
+    flex: 1; 
+    padding: 0 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex; align-items: center;
+}
+
+.ah-col {
+    color: #8d6e63; font-weight: bold; font-size: 0.65rem;
+}
+.header-ayan {
+    color: #666; font-weight: normal; font-size: 0.6rem; margin-left: 4px;
+}
+
+.ah-col.icon-col, .astro-label {
+    flex: 0 0 24px; 
+    width: 24px; 
+    justify-content: center; padding: 0;
+}
+.astro-label { height: 14px; margin: 0 0 0 8px; border-radius: 50%; width: 14px; flex-shrink: 0; flex-basis: 14px; }
+.astro-label.sun { background: radial-gradient(circle at 30% 30%, #fff 0%, #fdd835 100%); border: 1px solid #f9a825; box-shadow: none; }
+.astro-label.moon { background: var(--c-moon); border: none; }
+
+.ah-col.wide, .astro-cell.wide {
+    flex: 1.8; 
+}
+
+.ah-col.mini, .astro-cell.mini {
+    flex: 0.5; text-align: center; justify-content: center;
+}
+
+.ah-col.extra-slot, .astro-cell.extra-slot {
+    flex: 1; 
+}
+
+.astro-cell { color: var(--text-main); font-weight: bold; font-family: "Song", serif; }
+.ov-yes { color: var(--red-vivid); font-weight: 900; } 
+.ov-no { color: #bcaaa4; }
+
+/* 吉凶宿值面板 */
+.luck-data-box {
+    background: #fbf6ec; 
+    border-bottom: 1px solid #cbbba5;
+    padding: 4px 12px;
+    flex: 0 0 auto;
+    font-family: "Song", serif;
+    position: relative; z-index: 2;
+}
+.luck-row {
+    display: flex; align-items: center; 
+    gap: 8px;
+    height: 24px;
+}
+
+.luck-section-left {
+    display: flex; align-items: center;
+    gap: 12px; 
+}
+.luck-item-group {
+    display: flex; align-items: center;
+}
+.luck-label {
+    color: #8d6e63; font-weight: bold; font-size: 0.65rem; margin-right: 4px;
+}
+.luck-value.main {
+    font-weight: bold; font-size: 0.9rem; color: var(--text-main);
+}
+.luck-sub-divider {
+    width: 1px; height: 12px; background: #d7ccc8; opacity: 0.6;
+}
+.luck-divider {
+    width: 1px; height: 14px; background: #d7ccc8; margin: 0 8px;
+}
+.luck-section-right {
+    flex: 1;
+    display: flex; align-items: center; gap: 6px;
+    overflow: hidden;
+}
+
+.omen-tag {
+    font-family: "Song", serif;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: bold;
+    display: inline-flex; align-items: center; gap: 3px;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.omen-tag.bad {
+    border: 1px solid #000;
+    background: transparent;
+    color: #000;
+}
+
+/* 底部详情 */
+.detail-row { height: 26px; background: #e6d5bc; border-top: 1px solid #cbbba5; flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; gap: 4px; z-index: 2; }
+.detail-item { display: flex; align-items: baseline; gap: 4px; }
+.d-label { color: #5d4037; margin-right: 2px; font-size: 0.7rem; font-weight: bold; }
+.d-val { color: var(--text-main); font-size: 0.75rem; font-weight: bold; font-family: 'JetBrains Mono'; }
+.d-sub { color: #8d6e63; font-size: 0.65rem; }
+
+/* Modal */
+.hidden { display: none !important; }
+.modal { 
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+    background: rgba(44, 27, 23, 0.7); z-index: 9999; 
+    display: flex; align-items: center; justify-content: center; 
+    backdrop-filter: blur(2px);
+}
+.modal-content { 
+    background: #fbf6ec; border: 2px solid #5d4037; 
+    padding: 20px; width: 85%; max-width: 320px; border-radius: 2px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    color: var(--text-main);
+}
+.modal-content h3 { color: var(--red-vivid); margin-bottom: 15px; font-family: "Song", serif; text-align: center; font-weight: 900; border-bottom: 1px solid #d7ccc8; padding-bottom: 8px; }
+.input-dark { width: 100%; background: #fff; border: 1px solid #a1887f; padding: 10px; color: var(--text-main); margin-top: 5px; font-family: 'JetBrains Mono'; border-radius: 2px; }
+.form-group { margin-bottom: 15px; }
+.form-group label { color: #5d4037; font-size: 0.8rem; font-weight: bold; }
+.form-actions { display: flex; gap: 10px; margin-top: 20px; }
+.btn-primary { flex:1; background: var(--text-main); border: none; padding: 10px; cursor: pointer; color:#fbf6ec; font-weight: bold; border-radius: 2px; font-family: "Song", serif; }
+.btn-outline { flex:1; background: transparent; border: 1px solid #5d4037; color: #5d4037; padding: 10px; cursor: pointer; border-radius: 2px; font-family: "Song", serif; font-weight: bold; }
+
+/* 新增：级联选择器组样式 */
+.geo-select-group {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+}
+.geo-select-group select {
+    flex: 1;
+    min-width: 0; /* 防止子元素溢出 Flex 容器 */
+    padding: 8px 4px;
+}
+
+/* Horoscope Modal Responsive Layout */
+@media (max-width: 767px) {
+    .modal-content {
+        padding: 10px !important;
+        width: 98% !important;
+    }
+    #horoscope-data-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .aspects-panel {
+        grid-column: 1 / -1;
+    }
+    .horoscope-layout {
+        gap: 8px !important;
+    }
+}
+@media (min-width: 768px) {
+    .horoscope-layout {
+        flex-direction: row !important;
+        align-items: flex-start;
+    }
+    #astro-chart-container {
+        width: 55% !important;
+        max-width: 500px;
+    }
+    #horoscope-data-container {
+        width: 45% !important;
+        flex: 1;
+    }
+    #horoscope-data-grid {
+        grid-template-columns: 1fr 1fr 1.2fr;
+    }
+}
+
+.voc-monitor-box {
+    flex: 0 0 auto;
+    margin: 8px 12px;
+    background: #fbf6ec;
+    border: 1px solid var(--cell-border);
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    position: relative;
+    z-index: 10;
+}
+
+.voc-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    background: #ebdcc1;
+    font-family: 'Song', serif;
+    font-weight: bold;
+    color: var(--text-main);
+}
+
+#voc-status-icon {
+    margin-right: 8px;
+    font-size: 1.2rem;
+    color: var(--text-sub);
+}
+#voc-status-icon.voc-active {
+    color: #8a2be2; /* 不安的、空亡的颜色 (紫色/深灰) */
+}
+#voc-status-icon.voc-inactive {
+    color: #2e8b57; /* 安心的颜色 (绿色) */
+}
+
+#voc-status-text {
+    flex: 1;
+    font-size: 0.9rem;
+}
+#voc-status-text.voc-active-text {
+    color: #8a2be2;
+    font-weight: bold;
+}
+#voc-status-text.voc-inactive-text {
+    color: #2e8b57;
+    font-weight: bold;
+}
+
+.voc-toggle-arrow {
+    font-size: 0.8rem;
+    color: var(--text-sub);
+    transition: transform 0.2s ease;
+    display: inline-block;
+}
+
+.voc-details {
+    padding: 8px 12px;
+    background: #fbf6ec;
+    border-top: 1px dashed var(--cell-border);
+    border-radius: 0 0 4px 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-sub);
+}
+
+.voc-details.hidden {
+    display: none;
+}
+
+.voc-rule-toggle {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--cell-border);
+    justify-content: center;
+}
+
+.voc-rule-toggle label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.voc-aspect-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.voc-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+.voc-row:last-child {
+    margin-bottom: 0;
+}
+
+.voc-label {
+    font-family: 'Song', serif;
+    color: var(--text-main);
+}
+
+.voc-val {
+    font-weight: bold;
+}
+
+/* =========================================
+   Sapphire Theme (宝石蓝主题 - 费奇诺木星蓝)
+   ========================================= */
+body.theme-sapphire {
+    /* 背景体系：深邃的星空/海洋蓝 */
+    --bg-base: #020813;          /* 极深的夜空蓝 */
+    --bg-card: #0A192F;          /* 沉静的深海蓝 */
+    
+    /* 日历格子：现代冷色质感 */
+    --cell-bg-top: #112240;      /* 纸张高光 */
+    --cell-bg-bot: #0A192F;      /* 纸张阴影 */
+    --cell-border: #233554;      /* 边框 */
+    
+    /* 文字体系：星光白与冷灰 */
+    --text-main: #E2E8F0;        /* 主文字：星光白 */
+    --text-sub: #94A3B8;         /* 次要文字：冷灰蓝 */
+    
+    /* 强调色：木星的宝石蓝 */
+    --gold-main: #38BDF8;        /* 亮天蓝 */
+    --gold-dim: #0284C7;         /* 深海蓝 */
+    
+    /* 保持罗盘十字线红色，不覆盖 --red-vivid */
+    
+    /* 月相颜色：青金石蓝 */
+    --c-moon: #E2E8F0;           /* 月相在深色背景下需要亮色 */
+    --c-moon-glow: rgba(56, 189, 248, 0.15);
+
+    /* 五行颜色 (高亮荧光感) - 用户要求不改动 */
+    
+    --border-lite: #1E293B; /* 浅蓝灰分隔线 */
+    --border-color: #334155; /* 边框色 */
+    --bg-panel: #0F172A; /* 面板背景色 */
+}
+
+/* 顶部栏 */
+body.theme-sapphire .control-header {
+    background: #0F172A;
+    border-bottom: 1px solid #1E293B;
+}
+
+body.theme-sapphire .brand-title-top {
+    color: #38BDF8;
+    text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+body.theme-sapphire .gps-dot { background: #475569; border-color: #1E293B; }
+body.theme-sapphire .icon-btn { border-color: #334155; color: #94A3B8; }
+body.theme-sapphire .icon-btn:active { background: #1E293B; }
+
+/* 罗盘与干支太阳时界面 (dashboard-header) */
+body.theme-sapphire .dashboard-header {
+    background: linear-gradient(180deg, #0A192F 0%, #020813 100%);
+    border-bottom: 1px solid #1E293B;
+}
+
+/* 罗盘背景 */
+body.theme-sapphire .hud-left-compass {
+    background-color: #0A192F;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 30 Q 15 15, 30 30 T 60 30' stroke='%230284c7' fill='none' stroke-width='1' opacity='0.15'/%3E%3Cpath d='M0 45 Q 15 30, 30 45 T 60 45' stroke='%230284c7' fill='none' stroke-width='1' opacity='0.1'/%3E%3Cpath d='M0 15 Q 15 0, 30 15 T 60 15' stroke='%230284c7' fill='none' stroke-width='1' opacity='0.1'/%3E%3C/svg%3E");
+    background-size: 60px 60px;
+    border-right-color: #1E293B;
+}
+
+body.theme-sapphire .compass-widget {
+    background-color: #0F172A;
+    background-image: radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.2) 0%, transparent 70%);
+    border-color: #0284C7;
+    box-shadow: inset 0 0 20px rgba(2, 132, 199, 0.5), 0 0 15px rgba(2, 132, 199, 0.2);
+}
+body.theme-sapphire .cw-ring { border-color: #38BDF8; background: transparent; }
+body.theme-sapphire .cw-shan { color: #E2E8F0; }
+body.theme-sapphire .cw-level-dot { background: #94A3B8; }
+body.theme-sapphire .cw-level-dot.centered { background: var(--red-vivid); }
+body.theme-sapphire .cw-divider.cardinal { background: #0284C7; }
+
+/* 节气牌匾 */
+body.theme-sapphire .hud-center-pivot {
+    background: #0F172A;
+    border: 1px solid #1E293B;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* 日历头部 */
+body.theme-sapphire .cal-header { background: #0A192F; border-color: #1E293B; }
+body.theme-sapphire .cal-title-sub { color: #94A3B8; }
+body.theme-sapphire .cal-week-head { color: #94A3B8; border-bottom-color: #334155; }
+
+/* 日历格子 */
+body.theme-sapphire .c-day { background: #0A192F; border-bottom: 1px solid #1E293B; }
+body.theme-sapphire .c-day.empty { background: transparent; border: none; box-shadow: none; }
+body.theme-sapphire .c-day.today { background: #112240; border-color: #38BDF8; box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.2); }
+body.theme-sapphire .c-day.selected { background: #1E293B; }
+body.theme-sapphire .c-center { color: var(--text-main); opacity: 0.9; }
+body.theme-sapphire .c-corner.bl { color: var(--text-sub); }
+body.theme-sapphire .lbl-xu { color: var(--text-sub); }
+
+/* 数据面板 */
+body.theme-sapphire .astro-data-box { background: #0A192F; border-color: #1E293B; }
+body.theme-sapphire .astro-cell { background: #0A192F; border-top-color: #1E293B; border-bottom-color: #1E293B; }
+body.theme-sapphire .astro-row { border-bottom-color: #1E293B; }
+body.theme-sapphire .astro-label.sun { background: radial-gradient(circle at 30% 30%, #FDE047 0%, #EAB308 100%); border-color: #CA8A04; color: #000; }
+body.theme-sapphire .astro-label.moon { background: radial-gradient(circle at 30% 30%, #F8FAFC 0%, #94A3B8 100%); border-color: #475569; color: #000; }
+body.theme-sapphire .luck-data-box { background: #0A192F; border-color: #1E293B; }
+body.theme-sapphire .luck-divider { background: #1E293B; }
+body.theme-sapphire .luck-sub-divider { background: #1E293B; }
+body.theme-sapphire .detail-row { background: #0F172A; border-top-color: #1E293B; }
+body.theme-sapphire .d-label { color: #94A3B8; }
+body.theme-sapphire .d-sub { color: #64748B; }
+body.theme-sapphire .omen-tag.bad { color: var(--text-sub); border-color: var(--text-sub); }
+
+/* 弹窗及星盘数据面板 */
+body.theme-sapphire .modal-content { background: #0F172A; border-color: #334155; }
+body.theme-sapphire .modal-content h3 { border-bottom-color: #1E293B; color: #38BDF8; }
+body.theme-sapphire .input-dark { background: #020813; border-color: #334155; color: #E2E8F0; }
+body.theme-sapphire .btn-outline { border-color: #38BDF8; color: #38BDF8; }
+body.theme-sapphire .btn-primary { background: #0284C7; color: #ffffff; border-color: #0284C7; }
+body.theme-sapphire #horoscope-data-container { background: #0A192F; border-left-color: #1E293B; }
+body.theme-sapphire #horoscope-data-grid { background: #0A192F; }
+
+/* VOC与古典占星栏 */
+body.theme-sapphire .voc-monitor-box { background: #0A192F; }
+body.theme-sapphire .voc-header { background: #0F172A; }
+body.theme-sapphire .voc-details { background: #0A192F; }
+body.theme-sapphire .astro-info-text { color: #E2E8F0; }
+body.theme-sapphire .astro-section-title { color: #94A3B8; }
