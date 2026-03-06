@@ -471,16 +471,16 @@ async function fetchAstroDetails(targetDate) {
 function updateAll() {
     let targetDate = state.manualDate;
 
-    // VOC Fetch Throttling
+    // VOC Fetch Throttling - Defer to prevent UI blocking
     const currentMinute = Math.floor(targetDate.getTime() / 60000);
     if (currentMinute !== lastVocFetchMinute) {
         lastVocFetchMinute = currentMinute;
-        fetchVocData(targetDate);
+        setTimeout(() => fetchVocData(targetDate), 10);
     }
     
     if (currentMinute !== lastAstroFetchMinute) {
         lastAstroFetchMinute = currentMinute;
-        fetchAstroDetails(targetDate);
+        setTimeout(() => fetchAstroDetails(targetDate), 20);
     }
 
     // 0. 更新日历标题 (已移至 calendar.js 处理)
