@@ -2,29 +2,48 @@
 import { UI } from '../dom.js';
 
 export function initSensorSystem(onUpdate) {
-    // onUpdate 是一个回调函数，接收 (heading, beta, gamma)
+    let ticking = false; // 节流标志位
+    let lastHeading = 0;
+    let lastBeta = 0;
+    let lastGamma = 0;
+
+    // 统一的更新函数，使用 requestAnimationFrame 节流
+    function updateUI() {
+        onUpdate(lastHeading, lastBeta, lastGamma);
+        ticking = false;
+    }
+
+    function requestUpdate(h, b, g) {
+        if (h !== null) lastHeading = h;
+        if (b !== null) lastBeta = b;
+        if (g !== null) lastGamma = g;
+
+        if (!ticking) {
+            requestAnimationFrame(updateUI);
+            ticking = true;
+        }
+    }
     
     function handleAndroidAbsolute(e) {
         if(e.alpha !== null) {
             const h = 360 - e.alpha;
-            requestAnimationFrame(() => onUpdate(h, e.beta, e.gamma));
+            requestUpdate(h, e.beta, e.gamma);
         }
     }
 
     function handleStandard(e) {
         let h = null;
         if (e.webkitCompassHeading) {
+            // iOS
             h = e.webkitCompassHeading;
-            requestAnimationFrame(() => onUpdate(h, e.beta, e.gamma));
         } else if (!('ondeviceorientationabsolute' in window)) {
+            // Android non-absolute fallback
             if (e.absolute === true || e.alpha !== null) {
                  h = 360 - e.alpha;
-                 requestAnimationFrame(() => onUpdate(h, e.beta, e.gamma));
             }
-        } else {
-            // 仅更新水平仪
-            requestAnimationFrame(() => onUpdate(null, e.beta, e.gamma));
         }
+        // 无论是否有 heading，都需要更新水平仪数据 (beta, gamma)
+        requestUpdate(h, e.beta, e.gamma);
     }
 
     function startListening() {
