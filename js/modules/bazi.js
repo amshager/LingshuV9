@@ -213,6 +213,9 @@ async function fetchRadixData(date, lon, lat) {
 
 function initGPS() {
     if ("geolocation" in navigator) {
+        // 设置定位中状态
+        if (UI.gpsDot) UI.gpsDot.className = 'gps-dot locating';
+        
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 const { latitude, longitude, accuracy } = pos.coords;
