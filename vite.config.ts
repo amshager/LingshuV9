@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        allowedHosts: true, // 允许 ngrok 等隧道穿透
       },
       plugins: [
         wasm(),
