@@ -743,31 +743,185 @@ body {
 
 /* 月亮相位月历 */
 .voc-rule-toggle { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.btn-moon-calendar { flex: 0 0 auto; padding: 6px 10px; font-size: 0.8em; }
-.moon-calendar-content { max-width: 700px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; gap: 10px; }
-.moon-calendar-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
-.moon-calendar-title { font-weight: 700; color: var(--text-main); font-size: 0.95em; }
-.moon-calendar-close { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 18px; line-height: 1; }
-.moon-calendar-list { overflow-y: auto; max-height: 70vh; display: flex; flex-direction: column; gap: 6px; }
-.moon-cal-row { display: grid; grid-template-columns: 88px 120px 1fr auto; gap: 10px; align-items: center; font-size: 0.9em; padding: 4px 0; border-bottom: 1px dashed var(--border-color); }
-.moon-cal-time { color: var(--text-sub); font-family: 'JetBrains Mono'; }
-.moon-cal-sign { color: var(--text-main); font-weight: 700; font-family: "Song", serif; letter-spacing: 0.5px; }
-.moon-cal-aspect { color: var(--text-main); font-family: "Song", serif; }
-.zodiac-aries { color: #ef4444; }
-.zodiac-taurus { color: #22c55e; }
-.zodiac-gemini { color: #eab308; }
-.zodiac-cancer { color: #94a3b8; }
-.zodiac-leo { color: #f59e0b; }
-.zodiac-virgo { color: #84cc16; }
-.zodiac-libra { color: #f472b6; }
-.zodiac-scorpio { color: #b91c1c; }
-.zodiac-sagittarius { color: #8b5cf6; }
-.zodiac-capricorn { color: #a16207; }
-.zodiac-aquarius { color: #38bdf8; }
-.zodiac-pisces { color: #14b8a6; }
-.moon-cal-voc { font-size: 0.85em; padding: 2px 6px; border-radius: 4px; border: 1px solid transparent; }
-.moon-cal-voc.begin { color: #eab308; border-color: rgba(234,179,8,0.4); }
-.moon-cal-voc.end { color: #10b981; border-color: rgba(16,185,129,0.4); }
+.btn-moon-calendar { 
+    flex: 0 0 auto; 
+    padding: 4px 12px; 
+    font-size: 0.85em; 
+    font-family: "Song", serif;
+    font-weight: 700;
+    color: var(--gold-dim);
+    background: transparent;
+    border: 1px solid var(--gold-dim);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.btn-moon-calendar:hover {
+    background: var(--gold-dim);
+    color: var(--bg-card);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.moon-calendar-content { 
+    max-width: 600px; 
+    width: 95%; 
+    max-height: 85vh; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 12px; 
+    background: var(--bg-card); 
+    border: 3px solid var(--border-color); 
+    border-radius: 6px; 
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.05), 0 20px 50px rgba(0,0,0,0.5);
+    padding: 24px;
+}
+.moon-calendar-header { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    border-bottom: 2px solid var(--gold-dim); 
+    padding-bottom: 12px; 
+    position: relative;
+}
+.moon-calendar-header::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: var(--gold-dim);
+    opacity: 0.5;
+}
+.moon-calendar-title { 
+    font-weight: 900; 
+    color: var(--red-vivid); 
+    font-size: 1.25em; 
+    font-family: "Song", serif;
+    letter-spacing: 2px;
+    text-align: center;
+    flex-grow: 1;
+    text-shadow: 1px 1px 0px rgba(255,255,255,0.5);
+}
+.moon-calendar-close { 
+    background: var(--bg-card); 
+    border: 1px solid var(--gold-dim); 
+    color: var(--gold-dim); 
+    width: 32px; 
+    height: 32px; 
+    border-radius: 50%; 
+    cursor: pointer; 
+    font-size: 20px; 
+    line-height: 1; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+.moon-calendar-close:hover {
+    background: var(--gold-dim);
+    color: var(--bg-card);
+    transform: rotate(90deg);
+}
+.moon-calendar-list { 
+    overflow-y: auto; 
+    max-height: 65vh; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 8px; 
+    margin-top: 5px;
+    /* 去除滚动条 */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+.moon-calendar-list::-webkit-scrollbar { display: none; /* Safari/Chrome */ }
+
+.moon-cal-current-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--red-vivid);
+    font-family: 'JetBrains Mono', serif;
+    font-size: 0.8em;
+    margin: 4px 0;
+    opacity: 0.8;
+}
+.crosshair-icon {
+    font-size: 10px;
+}
+.crosshair-line {
+    flex: 1;
+    height: 1px;
+    background: var(--red-vivid);
+    position: relative;
+}
+.crosshair-line::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: -2px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--red-vivid);
+}
+
+.moon-cal-row { 
+    display: grid; 
+    grid-template-columns: 85px 120px 1fr auto; 
+    gap: 12px; 
+    align-items: center; 
+    font-size: 0.95em; 
+    padding: 10px 12px; 
+    background: var(--cell-bg-top); 
+    border: 1px solid var(--border-lite);
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.moon-cal-row:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-color: var(--gold-dim);
+}
+.moon-cal-time { 
+    color: var(--text-sub); 
+    font-family: 'JetBrains Mono'; 
+    font-size: 0.85em;
+    font-weight: 700;
+}
+.moon-cal-sign { 
+    font-weight: 900; 
+    font-family: "Song", serif; 
+    letter-spacing: 1px; 
+    font-size: 1.05em;
+    text-shadow: 0px 1px 0px rgba(255,255,255,0.8);
+}
+.moon-cal-aspect { 
+    color: var(--text-main); 
+    font-family: "Song", serif; 
+    font-weight: 500;
+    font-size: 0.95em;
+}
+
+/* 传统占星四元素色系 */
+.zodiac-aries, .zodiac-leo, .zodiac-sagittarius { color: #c62828; } /* 火象：朱砂绯红 */
+.zodiac-taurus, .zodiac-virgo, .zodiac-capricorn { color: #2e7d32; } /* 土象：苍苔墨绿 */
+.zodiac-gemini, .zodiac-libra, .zodiac-aquarius { color: #d97706; } /* 风象：琥珀金赭 */
+.zodiac-cancer, .zodiac-scorpio, .zodiac-pisces { color: #1565c0; } /* 水象：琉璃群青 */
+
+.moon-cal-voc { 
+    font-size: 0.8em; 
+    padding: 4px 10px; 
+    border-radius: 12px; 
+    font-family: "Song", serif;
+    font-weight: 900;
+    letter-spacing: 1px;
+    box-shadow: inset 0 0 2px rgba(0,0,0,0.1);
+}
+.moon-cal-voc.begin { color: #c62828; background: rgba(198, 40, 40, 0.08); border: 1px solid rgba(198, 40, 40, 0.3); }
+.moon-cal-voc.end { color: #2e7d32; background: rgba(46, 125, 50, 0.08); border: 1px solid rgba(46, 125, 50, 0.3); }
 
 /* 新增：级联选择器组样式 */
 .geo-select-group {
@@ -843,7 +997,7 @@ body {
     color: var(--text-sub);
 }
 #voc-status-icon.voc-active {
-    color: #8a2be2; /* 不安的、空亡的颜色 (紫色/深灰) */
+    color: #20b2aa; /* 代表休息的蓝绿色 (LightSeaGreen) */
 }
 #voc-status-icon.voc-inactive {
     color: #2e8b57; /* 安心的颜色 (绿色) */
@@ -851,15 +1005,41 @@ body {
 
 #voc-status-text {
     flex: 1;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 #voc-status-text.voc-active-text {
-    color: #8a2be2;
+    color: #20b2aa;
     font-weight: bold;
 }
 #voc-status-text.voc-inactive-text {
     color: #2e8b57;
     font-weight: bold;
+}
+
+.voc-main-text {
+    font-family: "Song", serif;
+    font-weight: 900;
+    letter-spacing: 0px;
+    white-space: nowrap;
+}
+
+.next-aspect-hint {
+    font-size: 0.75em;
+    color: var(--text-sub);
+    font-family: 'JetBrains Mono', serif;
+    font-weight: normal;
+    background: rgba(161, 136, 127, 0.1);
+    padding: 2px 4px;
+    border-radius: 4px;
+    border: 1px solid rgba(161, 136, 127, 0.3);
+    white-space: nowrap;
 }
 
 .voc-toggle-arrow {
@@ -1059,3 +1239,74 @@ body.theme-sapphire .voc-header { background: #0F172A; }
 body.theme-sapphire .voc-details { background: #0A192F; }
 body.theme-sapphire .astro-info-text { color: #E2E8F0; }
 body.theme-sapphire .astro-section-title { color: #94A3B8; }
+body.theme-sapphire .next-aspect-hint {
+    background: rgba(148, 163, 184, 0.1);
+    color: #94A3B8;
+    border-color: rgba(148, 163, 184, 0.3);
+}
+
+/* 详细月历主题适配 (Dark Sapphire) */
+body.theme-sapphire .moon-calendar-content { background: #0F172A; border-color: #334155; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+body.theme-sapphire .moon-calendar-header { border-bottom-color: #1E293B; }
+body.theme-sapphire .moon-calendar-header::after { background: #334155; }
+body.theme-sapphire .moon-calendar-title { color: #38BDF8; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+body.theme-sapphire .moon-calendar-close { background: #0F172A; border-color: #334155; color: #94A3B8; }
+body.theme-sapphire .moon-calendar-close:hover { background: #334155; color: #F87171; }
+body.theme-sapphire .moon-cal-row { background: #1E293B; border-color: #334155; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+body.theme-sapphire .moon-cal-row:hover { border-color: #38BDF8; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+body.theme-sapphire .moon-cal-time { color: #94A3B8; }
+body.theme-sapphire .moon-cal-sign { text-shadow: none; }
+body.theme-sapphire .moon-cal-aspect { color: #E2E8F0; }
+body.theme-sapphire .moon-cal-current-time { color: #F87171; }
+body.theme-sapphire .crosshair-line, 
+body.theme-sapphire .crosshair-line::after { background: #F87171; }
+body.theme-sapphire .moon-cal-voc.begin { color: #F87171; background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); box-shadow: none; }
+body.theme-sapphire .moon-cal-voc.end { color: #34D399; background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); box-shadow: none; }
+body.theme-sapphire .moon-calendar-list::-webkit-scrollbar-thumb { background: #475569; }
+body.theme-sapphire .moon-calendar-list::-webkit-scrollbar-track { background: #0F172A; }
+
+body.theme-sapphire .zodiac-aries, body.theme-sapphire .zodiac-leo, body.theme-sapphire .zodiac-sagittarius { color: #F87171; } /* 火象：明艳红 */
+body.theme-sapphire .zodiac-taurus, body.theme-sapphire .zodiac-virgo, body.theme-sapphire .zodiac-capricorn { color: #4ADE80; } /* 土象：翠微绿 */
+body.theme-sapphire .zodiac-gemini, body.theme-sapphire .zodiac-libra, body.theme-sapphire .zodiac-aquarius { color: #FBBF24; } /* 风象：琉璃金 */
+body.theme-sapphire .zodiac-cancer, body.theme-sapphire .zodiac-scorpio, body.theme-sapphire .zodiac-pisces { color: #60A5FA; } /* 水象：天际蓝 */
+
+/* 移动端适配 (针对宽小于400px的设备，如360px宽的手机) */
+@media (max-width: 400px) {
+    .moon-calendar-content {
+        padding: 12px 10px;
+        width: 98%;
+        gap: 6px;
+    }
+    .moon-calendar-header {
+        padding-bottom: 6px;
+    }
+    .moon-calendar-title {
+        font-size: 0.95em;
+        letter-spacing: 0;
+    }
+    .moon-calendar-close {
+        width: 24px;
+        height: 24px;
+        font-size: 16px;
+    }
+    .moon-cal-row {
+        grid-template-columns: 60px 80px 1fr auto;
+        gap: 6px;
+        padding: 6px;
+        font-size: 0.8em;
+    }
+    .moon-cal-time {
+        font-size: 0.7em;
+    }
+    .moon-cal-sign {
+        font-size: 0.9em;
+    }
+    .moon-cal-aspect {
+        font-size: 0.85em;
+    }
+    .moon-cal-voc {
+        padding: 2px 4px;
+        font-size: 0.7em;
+        border-radius: 8px;
+    }
+}

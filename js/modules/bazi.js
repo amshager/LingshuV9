@@ -121,6 +121,9 @@ function updateGpsUI(lat, lon, accuracy, type, manualName = null) {
         displayLoc = findNearestPlace(lat, lon);
     }
     
+    // Update state to ensure features like Moon Calendar use the right name
+    state.locationName = displayLoc;
+    
     // Update Subtext (Name + Accuracy)
     if (type === 'GPS' && accuracy !== null) {
         UI.gpsAcc.innerText = `${displayLoc} ±${Math.round(accuracy)}m`;
@@ -289,18 +292,6 @@ async function fetchVocData(targetDate) {
         
         const data = await fetchVocDataLocal(targetDate, rule);
         
-        if (data.isVoc) {
-            UI.vocStatusIcon.innerText = '●';
-            UI.vocStatusIcon.className = 'voc-active';
-            UI.vocStatusText.innerText = `月亮空亡中 ${data.currentMoonPos.icon}${data.currentMoonPos.str}`;
-            UI.vocStatusText.className = 'voc-active-text';
-        } else {
-            UI.vocStatusIcon.innerText = '○';
-            UI.vocStatusIcon.className = '';
-            UI.vocStatusText.innerText = `月亮运行中 ${data.currentMoonPos.icon}${data.currentMoonPos.str}`;
-            UI.vocStatusText.className = '';
-        }
-        
         const formatTime = (isoStr) => {
             const d = new Date(isoStr);
             const mm = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -309,6 +300,41 @@ async function fetchVocData(targetDate) {
             const min = d.getMinutes().toString().padStart(2, '0');
             return `${mm}/${dd} ${hh}:${min}`;
         };
+        
+        let nextAspect = data.timeline.find(e => e.jd > data.currentJd && e.type === 'aspect');
+        let nextAspectStr = '';
+        if (nextAspect) {
+            const angleSymbols = { 0: '☌', 60: '⚹', 90: '□', 120: '△', 180: '☍' };
+            const planetSymbols = {
+                'Sun': '☉', 'Moon': '☽', 'Mercury': '☿', 'Venus': '♀', 'Mars': '♂', 
+                'Jupiter': '♃', 'Saturn': '♄', 'Uranus': '♅', 'Neptune': '♆', 'Pluto': '♇',
+                '太阳': '☉', '月亮': '☽', '水星': '☿', '金星': '♀', '火星': '♂',
+                '木星': '♃', '土星': '♄', '天王星': '♅', '海王星': '♆', '冥王星': '♇',
+                0: '☉', 1: '☽', 2: '☿', 3: '♀', 4: '♂', 5: '♃', 6: '♄', 7: '♅', 8: '♆', 9: '♇'
+            };
+            const pSymbol = planetSymbols[nextAspect.planet] || nextAspect.planet;
+            const aSymbol = angleSymbols[nextAspect.angle] || nextAspect.angle;
+            
+            const nd = new Date(nextAspect.date);
+            const ndd = nd.getDate().toString().padStart(2, '0');
+            const nhh = nd.getHours().toString().padStart(2, '0');
+            const nmin = nd.getMinutes().toString().padStart(2, '0');
+            const moonSign = nextAspect.moonPos ? nextAspect.moonPos.icon : '';
+            
+            nextAspectStr = `<span class="next-aspect-hint">${moonSign}☽${aSymbol}${pSymbol} ${ndd}-${nhh}:${nmin}</span>`;
+        }
+
+        if (data.isVoc) {
+            UI.vocStatusIcon.innerText = '●';
+            UI.vocStatusIcon.className = 'voc-active';
+            UI.vocStatusText.innerHTML = `<span class="voc-main-text">VOC ${data.currentMoonPos.icon}${data.currentMoonPos.str}</span>${nextAspectStr}`;
+            UI.vocStatusText.className = 'voc-active-text';
+        } else {
+            UI.vocStatusIcon.innerText = '○';
+            UI.vocStatusIcon.className = '';
+            UI.vocStatusText.innerHTML = `<span class="voc-main-text">VOC ${data.currentMoonPos.icon}${data.currentMoonPos.str}</span>${nextAspectStr}`;
+            UI.vocStatusText.className = '';
+        }
         
         const nowMs = targetDate.getTime();
         let vocStatusHtml = '';
@@ -432,7 +458,19 @@ function renderMoonCalendarList(events) {
         '双鱼座': 'zodiac-pisces'
     };
 
-    const rows = events.map(e => {
+    let insertedCurrent = false;
+    const targetTime = state.manualDate.getTime();
+    const rows = [];
+
+    events.forEach(e => {
+        const eventTime = new Date(e.date).getTime();
+        let isCurrentLine = false;
+        
+        if (!insertedCurrent && eventTime > targetTime) {
+            isCurrentLine = true;
+            insertedCurrent = true;
+        }
+
         const timeStr = formatMoonCalTime(e.date);
         const signText = `${e.sign}${e.deg.toString().padStart(2, '0')}°${e.min.toString().padStart(2, '0')}'`;
         const signClass = signClassMap[e.sign] || '';
@@ -449,17 +487,46 @@ function renderMoonCalendarList(events) {
         } else if (e.vocEnd) {
             vocTag = `<span class="moon-cal-voc end">VOC结束</span>`;
         }
-        return `
+        
+        if (isCurrentLine) {
+            rows.push(`
+                <div class="moon-cal-current-time" title="当前选定时间">
+                    <span class="crosshair-icon">▶</span>
+                    <div class="crosshair-line"></div>
+                </div>
+            `);
+        }
+
+        rows.push(`
             <div class="moon-cal-row">
                 <span class="moon-cal-time">${timeStr}</span>
                 <span class="moon-cal-sign ${signClass}">${signText}</span>
                 <span class="moon-cal-aspect">${aspectText}</span>
                 ${vocTag}
             </div>
-        `;
-    }).join('');
+        `);
+    });
 
-    UI.moonCalendarList.innerHTML = rows;
+    if (!insertedCurrent) {
+        rows.push(`
+            <div class="moon-cal-current-time" title="当前选定时间">
+                <span class="crosshair-icon">▶</span>
+                <div class="crosshair-line"></div>
+            </div>
+        `);
+    }
+
+    UI.moonCalendarList.innerHTML = rows.join('');
+
+    // 自动滚动到当前时间指示线
+    setTimeout(() => {
+        if (UI.moonCalendarList) {
+            const currentEl = UI.moonCalendarList.querySelector('.moon-cal-current-time');
+            if (currentEl) {
+                currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }, 50);
 }
 
 let lastAstroFetchMinute = -1;
