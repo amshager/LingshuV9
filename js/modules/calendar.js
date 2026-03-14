@@ -7,6 +7,7 @@ import { getYiCalendarDate } from './yiCalendar.js'; // 引入彝历模块
 import { fetchEclipsesForMonth } from './astrology.js';
 
 let onDateSelectCallback = null;
+const eclipsesCache = new Map();
 
 // 生成月相 SVG 路径
 // forceFull: 强制绘制全圆 (用于望日，忽略具体时刻的缺角)
@@ -279,7 +280,12 @@ async function renderGrid(viewDate, lat = 0, lon = 0) {
     // 异步获取本月日月食数据并更新 DOM
     setTimeout(async () => {
         try {
-            const eclipses = await fetchEclipsesForMonth(year, month, lat, lon);
+            const cacheKey = `${year}-${month}-${lat}-${lon}`;
+            let eclipses = eclipsesCache.get(cacheKey);
+            if (!eclipses) {
+                eclipses = await fetchEclipsesForMonth(year, month, lat, lon);
+                eclipsesCache.set(cacheKey, eclipses);
+            }
             if (eclipses.length > 0) {
                 const placeholders = UI.calGrid.querySelectorAll('.eclipse-placeholder');
                 placeholders.forEach(el => {

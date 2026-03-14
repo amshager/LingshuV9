@@ -66,6 +66,11 @@ export const UI = {
     vocDetails: document.getElementById('voc-details'),
     vocAspectList: document.getElementById('voc-aspect-list'),
     vocRuleRadios: document.querySelectorAll('input[name="voc-rule"]'),
+    btnMoonCalendar: document.getElementById('btn-moon-calendar'),
+    moonCalendarModal: document.getElementById('moon-calendar-modal'),
+    moonCalendarList: document.getElementById('moon-calendar-list'),
+    moonCalendarTitle: document.getElementById('moon-calendar-title'),
+    btnCloseMoonCalendar: document.getElementById('btn-close-moon-calendar'),
 
     // Astro Details (New)
     astroDetailsBox: document.getElementById('astro-details-box'),

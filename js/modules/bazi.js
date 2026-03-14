@@ -2,7 +2,7 @@
 /* js/modules/bazi.js */
 import { computeGanzhi, getWuXingFromNayin, toTrueSolarClockDate } from './ganzhi.js';
 import { updateCalendarView, setOnDateSelect, getLunarPhaseStatus } from './calendar.js';
-import { calculateAstroData, fetchVocDataLocal, fetchAstroDetailsLocal } from './astrology.js';
+import { calculateAstroData, fetchVocDataLocal, fetchAstroDetailsLocal, fetchMoonCalendarForMonth } from './astrology.js';
 import { calculateSanHeXiu, calculateLunarMansion, checkMieMo } from './luck.js'; 
 import { getLunarDate, getSolarTermData } from './lunar.js'; 
 // Yi Module is now handled in calendar.js for title display
@@ -390,6 +390,76 @@ async function fetchVocData(targetDate) {
         console.error("VOC Fetch Error:", e);
         if (UI.vocStatusText) UI.vocStatusText.innerText = '检测失败';
     }
+}
+
+function formatMoonCalTime(isoStr) {
+    const d = new Date(isoStr);
+    const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+    const dd = d.getDate().toString().padStart(2, '0');
+    const hh = d.getHours().toString().padStart(2, '0');
+    const min = d.getMinutes().toString().padStart(2, '0');
+    return `${mm}/${dd} ${hh}:${min}`;
+}
+
+function renderMoonCalendarList(events) {
+    if (!UI.moonCalendarList) return;
+    if (!events || events.length === 0) {
+        UI.moonCalendarList.innerHTML = `<div class="moon-cal-row"><span class="moon-cal-time">--</span><span class="moon-cal-sign">无数据</span></div>`;
+        return;
+    }
+
+    const aspectSymbolMap = {
+        '合': '☌',
+        '六合': '⚹',
+        '刑': '□',
+        '拱': '△',
+        '对冲': '☍',
+        '对分': '☍'
+    };
+
+    const signClassMap = {
+        '白羊座': 'zodiac-aries',
+        '金牛座': 'zodiac-taurus',
+        '双子座': 'zodiac-gemini',
+        '巨蟹座': 'zodiac-cancer',
+        '狮子座': 'zodiac-leo',
+        '处女座': 'zodiac-virgo',
+        '天秤座': 'zodiac-libra',
+        '天蝎座': 'zodiac-scorpio',
+        '射手座': 'zodiac-sagittarius',
+        '摩羯座': 'zodiac-capricorn',
+        '水瓶座': 'zodiac-aquarius',
+        '双鱼座': 'zodiac-pisces'
+    };
+
+    const rows = events.map(e => {
+        const timeStr = formatMoonCalTime(e.date);
+        const signText = `${e.sign}${e.deg.toString().padStart(2, '0')}°${e.min.toString().padStart(2, '0')}'`;
+        const signClass = signClassMap[e.sign] || '';
+        let aspectText = '';
+        if (e.type === 'aspect') {
+            const symbol = aspectSymbolMap[e.aspect] || e.aspect;
+            aspectText = `${symbol} ${e.planet}`;
+        } else if (e.type === 'ingress') {
+            aspectText = `进入 ${e.sign}`;
+        }
+        let vocTag = '';
+        if (e.vocBegin) {
+            vocTag = `<span class="moon-cal-voc begin">VOC开始</span>`;
+        } else if (e.vocEnd) {
+            vocTag = `<span class="moon-cal-voc end">VOC结束</span>`;
+        }
+        return `
+            <div class="moon-cal-row">
+                <span class="moon-cal-time">${timeStr}</span>
+                <span class="moon-cal-sign ${signClass}">${signText}</span>
+                <span class="moon-cal-aspect">${aspectText}</span>
+                ${vocTag}
+            </div>
+        `;
+    }).join('');
+
+    UI.moonCalendarList.innerHTML = rows;
 }
 
 let lastAstroFetchMinute = -1;
@@ -1276,6 +1346,41 @@ export function mountBazi() {
                 const targetDate = state.manualDate;
                 fetchVocData(targetDate);
             });
+        });
+    }
+
+    if (UI.btnMoonCalendar && UI.moonCalendarModal && UI.moonCalendarList) {
+        UI.btnMoonCalendar.addEventListener('click', async () => {
+            try {
+                let rule = '10';
+                if (UI.vocRuleRadios) {
+                    UI.vocRuleRadios.forEach(r => {
+                        if (r.checked) rule = r.value;
+                    });
+                }
+                const d = state.manualDate;
+                const year = d.getFullYear();
+                const month = d.getMonth();
+                const data = await fetchMoonCalendarForMonth(year, month, state.lat, state.lon, rule);
+                const lonStr = state.lon.toFixed(4);
+                const latStr = state.lat.toFixed(4);
+                const locName = state.locationName || '';
+                if (UI.moonCalendarTitle) {
+                    UI.moonCalendarTitle.textContent = `${lonStr}E/${latStr}N ${locName}`.trim();
+                }
+                renderMoonCalendarList(data);
+                UI.moonCalendarModal.classList.remove('hidden');
+            } catch (e) {
+                console.error('Moon calendar fetch error:', e);
+                if (UI.moonCalendarList) {
+                    UI.moonCalendarList.innerHTML = `<div class="moon-cal-row"><span class="moon-cal-sign">加载失败</span></div>`;
+                }
+            }
+        });
+    }
+    if (UI.btnCloseMoonCalendar && UI.moonCalendarModal) {
+        UI.btnCloseMoonCalendar.addEventListener('click', () => {
+            UI.moonCalendarModal.classList.add('hidden');
         });
     }
 

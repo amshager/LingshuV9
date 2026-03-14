@@ -185,26 +185,45 @@ function initAstroWorker() {
             }
 
             const worker = new Worker(workerPath, { type: 'module' });
+            let settled = false;
+            let timeoutId = null;
+            const cleanup = (err) => {
+                if (settled) return;
+                settled = true;
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                    timeoutId = null;
+                }
+                if (err) {
+                    try { worker.terminate(); } catch {}
+                    if (astroWorker === worker) astroWorker = null;
+                    workerPromise = null;
+                }
+            };
 
             worker.onmessage = function(e) {
                 const { type, data, error } = e.data;
                 if (type === 'INIT_COMPLETE') {
                     console.log('[Astronomy] Worker initialized successfully');
                     astroWorker = worker; // Only set astroWorker after successful initialization
+                    cleanup();
                     resolve(astroWorker);
                 } else if (type === 'ERROR') {
                     console.error('[Astronomy] Worker initialization error:', error);
+                    cleanup(new Error(error));
                     reject(new Error(error));
                 }
             };
 
             worker.onerror = function(error) {
                 console.error('Worker error:', error);
+                cleanup(new Error('Worker initialization failed: ' + error.message));
                 reject(new Error('Worker initialization failed: ' + error.message));
             };
 
             // Add timeout for worker initialization
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
+                cleanup(new Error('Worker initialization timeout'));
                 reject(new Error('Worker initialization timeout'));
             }, 10000);
 
@@ -218,6 +237,7 @@ function initAstroWorker() {
             }
             worker.postMessage({ type: 'INIT_SW', data: { basePath } });
         } catch (error) {
+            if (workerPromise) workerPromise = null;
             reject(new Error('Failed to create worker: ' + error.message));
         }
     });
@@ -376,15 +396,24 @@ export async function fetchVocDataLocal(dateParam, ruleStr) {
     const worker = await initAstroWorker();
 
     return new Promise((resolve, reject) => {
-        const messageId = Date.now() + Math.random();
+        const requestId = Date.now() + Math.random();
+        let timeoutId = null;
+        const cleanup = () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+            worker.removeEventListener('message', handleMessage);
+        };
 
         const handleMessage = function(e) {
-            const { type, data, error } = e.data;
+            const { type, data, error, requestId: respId } = e.data;
+            if (respId !== requestId) return;
             if (type === 'VOC_RESULT') {
-                worker.removeEventListener('message', handleMessage);
+                cleanup();
                 resolve(data);
             } else if (type === 'ERROR') {
-                worker.removeEventListener('message', handleMessage);
+                cleanup();
                 reject(new Error(error));
             }
         };
@@ -392,12 +421,13 @@ export async function fetchVocDataLocal(dateParam, ruleStr) {
         worker.addEventListener('message', handleMessage);
         worker.postMessage({
             type: 'CALC_VOC',
+            requestId,
             data: { dateParam, ruleStr }
         });
 
         // Timeout after 30 seconds
-        setTimeout(() => {
-            worker.removeEventListener('message', handleMessage);
+        timeoutId = setTimeout(() => {
+            cleanup();
             reject(new Error('VOC calculation timeout'));
         }, 30000);
     });
@@ -407,15 +437,24 @@ export async function fetchAstroDetailsLocal(dateParam, lat, lon) {
     const worker = await initAstroWorker();
 
     return new Promise((resolve, reject) => {
-        const messageId = Date.now() + Math.random();
+        const requestId = Date.now() + Math.random();
+        let timeoutId = null;
+        const cleanup = () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+            worker.removeEventListener('message', handleMessage);
+        };
 
         const handleMessage = function(e) {
-            const { type, data, error } = e.data;
+            const { type, data, error, requestId: respId } = e.data;
+            if (respId !== requestId) return;
             if (type === 'ASTRO_DETAILS_RESULT') {
-                worker.removeEventListener('message', handleMessage);
+                cleanup();
                 resolve(data);
             } else if (type === 'ERROR') {
-                worker.removeEventListener('message', handleMessage);
+                cleanup();
                 reject(new Error(error));
             }
         };
@@ -423,12 +462,13 @@ export async function fetchAstroDetailsLocal(dateParam, lat, lon) {
         worker.addEventListener('message', handleMessage);
         worker.postMessage({
             type: 'CALC_ASTRO_DETAILS',
+            requestId,
             data: { dateParam, lat, lon }
         });
 
         // Timeout after 30 seconds
-        setTimeout(() => {
-            worker.removeEventListener('message', handleMessage);
+        timeoutId = setTimeout(() => {
+            cleanup();
             reject(new Error('Astro details calculation timeout'));
         }, 30000);
     });
@@ -438,15 +478,24 @@ export async function fetchEclipsesForMonth(year, month, lat, lon) {
     const worker = await initAstroWorker();
 
     return new Promise((resolve, reject) => {
-        const messageId = Date.now() + Math.random();
+        const requestId = Date.now() + Math.random();
+        let timeoutId = null;
+        const cleanup = () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+            worker.removeEventListener('message', handleMessage);
+        };
 
         const handleMessage = function(e) {
-            const { type, data, error } = e.data;
+            const { type, data, error, requestId: respId } = e.data;
+            if (respId !== requestId) return;
             if (type === 'ECLIPSES_RESULT') {
-                worker.removeEventListener('message', handleMessage);
+                cleanup();
                 resolve(data);
             } else if (type === 'ERROR') {
-                worker.removeEventListener('message', handleMessage);
+                cleanup();
                 reject(new Error(error));
             }
         };
@@ -454,13 +503,55 @@ export async function fetchEclipsesForMonth(year, month, lat, lon) {
         worker.addEventListener('message', handleMessage);
         worker.postMessage({
             type: 'CALC_ECLIPSES',
+            requestId,
             data: { year, month, lat, lon }
         });
 
         // Timeout after 30 seconds
-        setTimeout(() => {
-            worker.removeEventListener('message', handleMessage);
+        timeoutId = setTimeout(() => {
+            cleanup();
             reject(new Error('Eclipses calculation timeout'));
+        }, 30000);
+    });
+}
+
+export async function fetchMoonCalendarForMonth(year, month, lat, lon, ruleStr) {
+    const worker = await initAstroWorker();
+
+    return new Promise((resolve, reject) => {
+        const requestId = Date.now() + Math.random();
+        let timeoutId = null;
+        const cleanup = () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+            worker.removeEventListener('message', handleMessage);
+        };
+
+        const handleMessage = function(e) {
+            const { type, data, error, requestId: respId } = e.data;
+            if (respId !== requestId) return;
+            if (type === 'MOON_CALENDAR_RESULT') {
+                cleanup();
+                resolve(data);
+            } else if (type === 'ERROR') {
+                cleanup();
+                reject(new Error(error));
+            }
+        };
+
+        worker.addEventListener('message', handleMessage);
+        worker.postMessage({
+            type: 'CALC_MOON_CALENDAR',
+            requestId,
+            data: { year, month, lat, lon, ruleStr }
+        });
+
+        // Timeout after 30 seconds
+        timeoutId = setTimeout(() => {
+            cleanup();
+            reject(new Error('Moon calendar calculation timeout'));
         }, 30000);
     });
 }

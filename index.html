@@ -251,6 +251,7 @@
                     <div class="voc-rule-toggle">
                         <label><input type="radio" name="voc-rule" value="7" checked> 古典7星</label>
                         <label><input type="radio" name="voc-rule" value="10"> 现代10星</label>
+                        <button id="btn-moon-calendar" class="btn-outline btn-moon-calendar">详细月历</button>
                     </div>
                     <div class="voc-aspect-list" id="voc-aspect-list">
                         <!-- JS generated list -->
@@ -346,6 +347,17 @@
                             <!-- Data will be injected here -->
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- 月亮相位月历弹窗 -->
+            <div id="moon-calendar-modal" class="modal hidden">
+                <div class="modal-content moon-calendar-content">
+                    <div class="moon-calendar-header">
+                        <div id="moon-calendar-title" class="moon-calendar-title">--</div>
+                        <button id="btn-close-moon-calendar" class="moon-calendar-close">×</button>
+                    </div>
+                    <div id="moon-calendar-list" class="moon-calendar-list"></div>
                 </div>
             </div>
             

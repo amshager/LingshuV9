@@ -13,6 +13,28 @@ const aspects = [0, 60, 90, 120, 180, 240, 270, 300]; // 包括所有方向的�
 
 const SIGNS = ["白羊座", "金牛座", "双子座", "巨蟹座", "狮子座", "处女座", "天秤座", "天蝎座", "射手座", "摩羯座", "水瓶座", "双鱼座"];
 const SIGN_ICONS = ["♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"];
+const PLANET_NAMES = {
+  [SE_SUN]: '太阳',
+  [SE_MOON]: '月亮',
+  [SE_MERCURY]: '水星',
+  [SE_VENUS]: '金星',
+  [SE_MARS]: '火星',
+  [SE_JUPITER]: '木星',
+  [SE_SATURN]: '土星',
+  [SE_URANUS]: '天王星',
+  [SE_NEPTUNE]: '海王星',
+  [SE_PLUTO]: '冥王星'
+};
+const ASPECT_NAMES = {
+  0: '合',
+  60: '六合',
+  90: '刑',
+  120: '拱',
+  180: '对冲',
+  240: '拱',
+  270: '刑',
+  300: '六合'
+};
 
 function getFlag() {
     return epheLoaded ? 258 : 260; // 258 = SEFLG_SWIEPH(2) | SEFLG_SPEED(256), 260 = SEFLG_MOSEPH(256) | SEFLG_SPEED(4)
@@ -657,12 +679,105 @@ function calculateEclipsesForMonth(sw, year, month, lat, lon) {
   return eclipses;
 }
 
+function jdFromDate(sw, dateObj) {
+  return sw.swe_julday(
+    dateObj.getUTCFullYear(),
+    dateObj.getUTCMonth() + 1,
+    dateObj.getUTCDate(),
+    dateObj.getUTCHours() + dateObj.getUTCMinutes() / 60 + dateObj.getUTCSeconds() / 3600,
+    1
+  );
+}
+
+function dateFromJd(sw, jd) {
+  const d = sw.swe_revjul(jd, 1);
+  const hrs = Math.floor(d.hour);
+  const mins = Math.floor((d.hour - hrs) * 60);
+  const secs = Math.floor((((d.hour - hrs) * 60 - mins) * 60));
+  return new Date(Date.UTC(d.year, d.month - 1, d.day, hrs, mins, secs));
+}
+
+function calculateMoonCalendar(sw, year, month, ruleStr) {
+  const rule = ruleStr === '7' ? 7 : 10;
+  const planets_to_use = rule === 7
+    ? [SE_SUN, SE_MERCURY, SE_VENUS, SE_MARS, SE_JUPITER, SE_SATURN]
+    : [SE_SUN, SE_MERCURY, SE_VENUS, SE_MARS, SE_JUPITER, SE_SATURN, SE_URANUS, SE_NEPTUNE, SE_PLUTO];
+
+  const startLocal = new Date(year, month, 1, 0, 0, 0);
+  const endLocal = new Date(year, month + 1, 1, 0, 0, 0);
+  const jd_start = jdFromDate(sw, startLocal);
+  const jd_end = jdFromDate(sw, endLocal);
+
+  const aspectsFound = findAllAspects(sw, jd_start, jd_end, planets_to_use);
+  const events = [];
+
+  aspectsFound.forEach(a => {
+    const moonPos = formatPosition(getPosition(sw, SE_MOON, a.jd));
+    events.push({
+      type: 'aspect',
+      jd: a.jd,
+      date: dateFromJd(sw, a.jd).toISOString(),
+      sign: moonPos.sign,
+      signIcon: moonPos.icon,
+      deg: moonPos.deg,
+      min: moonPos.min,
+      aspect: ASPECT_NAMES[a.aspect] || `${a.aspect}°`,
+      planet: PLANET_NAMES[a.planet] || String(a.planet),
+      vocBegin: false,
+      vocEnd: false
+    });
+  });
+
+  const ingresses = [];
+  let jd = findNextSignIngress(sw, jd_start);
+  while (jd <= jd_end) {
+    ingresses.push(jd);
+    jd = findNextSignIngress(sw, jd + 0.01);
+  }
+
+  const ingressEvents = [];
+  ingresses.forEach(jdIngress => {
+    const moonPos = formatPosition(getPosition(sw, SE_MOON, jdIngress + 0.0001));
+    ingressEvents.push({
+      type: 'ingress',
+      jd: jdIngress,
+      date: dateFromJd(sw, jdIngress).toISOString(),
+      sign: moonPos.sign,
+      signIcon: moonPos.icon,
+      deg: moonPos.deg,
+      min: moonPos.min,
+      aspect: null,
+      planet: null,
+      vocBegin: false,
+      vocEnd: false
+    });
+  });
+
+  const allIngress = [findPrevSignIngress(sw, jd_start), ...ingresses];
+  for (let i = 0; i < allIngress.length - 1; i++) {
+    const a = allIngress[i];
+    const b = allIngress[i + 1];
+    const intervalAspects = aspectsFound.filter(ev => ev.jd > a && ev.jd < b);
+    if (intervalAspects.length > 0) {
+      const last = intervalAspects[intervalAspects.length - 1];
+      const evt = events.find(e => e.type === 'aspect' && e.jd === last.jd);
+      if (evt) evt.vocBegin = true;
+      const ingEvt = ingressEvents.find(e => e.jd === b);
+      if (ingEvt) ingEvt.vocEnd = true;
+    }
+  }
+
+  const combined = [...events, ...ingressEvents].filter(e => e.jd >= jd_start && e.jd < jd_end);
+  combined.sort((x, y) => x.jd - y.jd);
+  return combined;
+}
+
 self.onmessage = function(e) {
-  const { type, data } = e.data;
+  const { type, data, requestId } = e.data;
   try {
     // Only allow INIT_SW if not initialized, reject other messages until initialized
     if (!workerInitialized && type !== 'INIT_SW') {
-      self.postMessage({ type: 'ERROR', error: 'Worker not initialized yet. Please wait for INIT_COMPLETE.' });
+      self.postMessage({ type: 'ERROR', error: 'Worker not initialized yet. Please wait for INIT_COMPLETE.', requestId });
       return;
     }
 
@@ -716,45 +831,50 @@ self.onmessage = function(e) {
               swInstance.wasm._free(ptr);
               epheLoaded = true;
               console.log(`[Astronomy] Loaded ${loadedCount} ephemeris files.`);
-              self.postMessage({ type: 'INIT_COMPLETE' });
+              self.postMessage({ type: 'INIT_COMPLETE', requestId });
             } else {
               epheLoaded = false;
               console.log('[Astronomy] No ephemeris loaded, using Moshier fallback.');
-              self.postMessage({ type: 'INIT_COMPLETE' });
+              self.postMessage({ type: 'INIT_COMPLETE', requestId });
             }
           } catch (error) {
             console.error('[Astronomy Worker] Initialization error:', error);
-            self.postMessage({ type: 'ERROR', error: error.message });
+            self.postMessage({ type: 'ERROR', error: error.message, requestId });
           }
         })();
         break;
 
       case 'CALC_ASPECTS':
         const aspectsFound = findAllAspects(swInstance, data.jd_start, data.jd_end, data.planets_to_use);
-        self.postMessage({ type: 'ASPECTS_RESULT', data: aspectsFound });
+        self.postMessage({ type: 'ASPECTS_RESULT', data: aspectsFound, requestId });
         break;
 
       case 'CALC_VOC':
         if (!workerInitialized || !swInstance) {
-          self.postMessage({ type: 'ERROR', error: 'Worker not properly initialized' });
+          self.postMessage({ type: 'ERROR', error: 'Worker not properly initialized', requestId });
           break;
         }
         const vocData = calculateVocData(swInstance, data.dateParam, data.ruleStr);
-        self.postMessage({ type: 'VOC_RESULT', data: vocData });
+        self.postMessage({ type: 'VOC_RESULT', data: vocData, requestId });
         break;
 
       case 'CALC_ASTRO_DETAILS':
         if (!workerInitialized || !swInstance) {
-          self.postMessage({ type: 'ERROR', error: 'Worker not properly initialized' });
+          self.postMessage({ type: 'ERROR', error: 'Worker not properly initialized', requestId });
           break;
         }
         const astroDetails = calculateAstroDetails(swInstance, data.dateParam, data.lat, data.lon);
-        self.postMessage({ type: 'ASTRO_DETAILS_RESULT', data: astroDetails });
+        self.postMessage({ type: 'ASTRO_DETAILS_RESULT', data: astroDetails, requestId });
         break;
 
       case 'CALC_ECLIPSES':
         const eclipses = calculateEclipsesForMonth(swInstance, data.year, data.month, data.lat, data.lon);
-        self.postMessage({ type: 'ECLIPSES_RESULT', data: eclipses });
+        self.postMessage({ type: 'ECLIPSES_RESULT', data: eclipses, requestId });
+        break;
+        
+      case 'CALC_MOON_CALENDAR':
+        const moonCalendar = calculateMoonCalendar(swInstance, data.year, data.month, data.ruleStr);
+        self.postMessage({ type: 'MOON_CALENDAR_RESULT', data: moonCalendar, requestId });
         break;
 
       case 'CALC_POSITIONS':
@@ -762,13 +882,13 @@ self.onmessage = function(e) {
         for (const planet of data.planets) {
           positions[planet] = getPosition(swInstance, planet, data.jd);
         }
-        self.postMessage({ type: 'POSITIONS_RESULT', data: positions });
+        self.postMessage({ type: 'POSITIONS_RESULT', data: positions, requestId });
         break;
 
       default:
-        self.postMessage({ type: 'ERROR', error: 'Unknown message type' });
+        self.postMessage({ type: 'ERROR', error: 'Unknown message type', requestId });
     }
   } catch (error) {
-    self.postMessage({ type: 'ERROR', error: error.message });
+    self.postMessage({ type: 'ERROR', error: error.message, requestId });
   }
 };
