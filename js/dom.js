@@ -29,6 +29,7 @@ export const UI = {
     // Modal
     modal: document.getElementById('settings-modal'),
     inputTime: document.getElementById('set-time'),
+    inputTimeSolar: document.getElementById('set-time-solar'),
     inputLon: document.getElementById('set-lon'),
     inputLat: document.getElementById('set-lat'),
     btnCancel: document.getElementById('btn-cancel'),
@@ -95,5 +96,18 @@ export const UI = {
     modeDisplay: document.getElementById('mode-display'),
     tsTime: document.getElementById('true-solar-display'),
     legalDate: document.getElementById('date-display'),
+    // 九宫飞星
+    btnJiugong: document.getElementById('btn-jiugong'),
+    jiugongOverlay: document.getElementById('jiugong-overlay'),
+    jgStartPalace: document.getElementById('jg-start-palace'),
+    jgStartNum: document.getElementById('jg-start-num'),
+    jgDirection: document.getElementById('jg-direction'),
+    btnFlyStars: document.getElementById('btn-fly-stars'),
+    jiugongGrid: document.getElementById('jiugong-grid'),
+    jgStartNum: document.getElementById('jg-start-num'),
+    jgDirection: document.getElementById('jg-direction'),
+    btnFlyStars: document.getElementById('btn-fly-stars'),
+    jiugongGrid: document.getElementById('jiugong-grid'),
+
     legalTime: document.getElementById('time-display')
 };

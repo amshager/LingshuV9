@@ -170,15 +170,12 @@ let workerPromise = null;
 
 function initAstroWorker() {
     if (astroWorker) {
-        console.log('[Main] Worker already initialized, returning existing worker');
         return Promise.resolve(astroWorker);
     }
     if (workerPromise) {
-        console.log('[Main] Worker initialization in progress, waiting...');
         return workerPromise;
     }
 
-    console.log('[Main] Starting new worker initialization');
     workerPromise = new Promise((resolve, reject) => {
         try {
             // Determine the correct path for the worker file
@@ -191,13 +188,12 @@ function initAstroWorker() {
 
             worker.onmessage = function(e) {
                 const { type, data, error } = e.data;
-                console.log(`[Main] Worker message received: ${type}`);
                 if (type === 'INIT_COMPLETE') {
-                    console.log('[Main] Worker initialization completed successfully');
+                    console.log('[Astronomy] Worker initialized successfully');
                     astroWorker = worker; // Only set astroWorker after successful initialization
                     resolve(astroWorker);
                 } else if (type === 'ERROR') {
-                    console.error('[Main] Worker initialization error:', error);
+                    console.error('[Astronomy] Worker initialization error:', error);
                     reject(new Error(error));
                 }
             };
@@ -220,7 +216,6 @@ function initAstroWorker() {
                 // Fallback for non-Vite environments
                 basePath = window.location.pathname.replace(/\/[^\/]*$/, '/');
             }
-            console.log(`[Main] Sending INIT_SW message with basePath: ${basePath}`);
             worker.postMessage({ type: 'INIT_SW', data: { basePath } });
         } catch (error) {
             reject(new Error('Failed to create worker: ' + error.message));
@@ -395,7 +390,6 @@ export async function fetchVocDataLocal(dateParam, ruleStr) {
         };
 
         worker.addEventListener('message', handleMessage);
-        console.log('[Main] Sending CALC_VOC message');
         worker.postMessage({
             type: 'CALC_VOC',
             data: { dateParam, ruleStr }
@@ -427,7 +421,6 @@ export async function fetchAstroDetailsLocal(dateParam, lat, lon) {
         };
 
         worker.addEventListener('message', handleMessage);
-        console.log('[Main] Sending CALC_ASTRO_DETAILS message');
         worker.postMessage({
             type: 'CALC_ASTRO_DETAILS',
             data: { dateParam, lat, lon }
@@ -459,7 +452,6 @@ export async function fetchEclipsesForMonth(year, month, lat, lon) {
         };
 
         worker.addEventListener('message', handleMessage);
-        console.log('[Main] Sending CALC_ECLIPSES message');
         worker.postMessage({
             type: 'CALC_ECLIPSES',
             data: { year, month, lat, lon }

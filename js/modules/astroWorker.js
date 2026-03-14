@@ -9,7 +9,7 @@ const SE_SUN = 0, SE_MOON = 1, SE_MERCURY = 2, SE_VENUS = 3, SE_MARS = 4;
 const SE_JUPITER = 5, SE_SATURN = 6, SE_URANUS = 7, SE_NEPTUNE = 8, SE_PLUTO = 9;
 const SE_TRUE_NODE = 11, SE_MEAN_APOG = 12, SE_CHIRON = 15;
 const planets = [SE_SUN, SE_MERCURY, SE_VENUS, SE_MARS, SE_JUPITER, SE_SATURN, SE_URANUS, SE_NEPTUNE, SE_PLUTO];
-const aspects = [0, 60, 90, 120, 180]; // 只包含标准主要相位用于VOC计算
+const aspects = [0, 60, 90, 120, 180, 240, 270, 300]; // 包括所有方向的主要相位
 
 const SIGNS = ["白羊座", "金牛座", "双子座", "巨蟹座", "狮子座", "处女座", "天秤座", "天蝎座", "射手座", "摩羯座", "水瓶座", "双鱼座"];
 const SIGN_ICONS = ["♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"];
@@ -113,7 +113,7 @@ function findAllAspects(sw, jd_start, jd_end, planets_to_use) {
           aspects_found.push({
             jd: exact_jd,
             planet: p,
-            aspect: asp,
+            aspect: asp > 180 ? 360 - asp : asp, // 归一化为180度以内
             orb: Math.abs(mid_diff - asp)
           });
         }
@@ -121,6 +121,9 @@ function findAllAspects(sw, jd_start, jd_end, planets_to_use) {
       prev_diff = curr_diff;
     }
   }
+  
+  // 按照时间(jd)对发现的所有相位进行排序！这一步对正确找到"最后一次相位"至关重要
+  aspects_found.sort((a, b) => a.jd - b.jd);
   return aspects_found;
 }
 
@@ -656,11 +659,9 @@ function calculateEclipsesForMonth(sw, year, month, lat, lon) {
 
 self.onmessage = function(e) {
   const { type, data } = e.data;
-  console.log(`[Worker] Received message: ${type}`, swInstance ? 'swInstance ready' : 'swInstance null');
   try {
     // Only allow INIT_SW if not initialized, reject other messages until initialized
     if (!workerInitialized && type !== 'INIT_SW') {
-      console.log(`[Worker] Rejecting ${type} - Worker not initialized yet`);
       self.postMessage({ type: 'ERROR', error: 'Worker not initialized yet. Please wait for INIT_COMPLETE.' });
       return;
     }
@@ -668,16 +669,10 @@ self.onmessage = function(e) {
     switch (type) {
       case 'INIT_SW':
         // Initialize Swiss Ephemeris with ephemeris files
-        console.log('[Worker] Starting INIT_SW');
         (async () => {
           try {
-            console.log('[Worker] Calling sweph.init()');
             swInstance = await sweph.init();
-            console.log('[Worker] sweph.init() completed, swInstance:', swInstance);
-            console.log('[Worker] swInstance type:', typeof swInstance);
             if (swInstance) {
-              console.log('[Worker] swInstance has swe_julday:', typeof swInstance.swe_julday);
-              console.log('[Worker] Setting workerInitialized = true');
               workerInitialized = true;
             } else {
               throw new Error('sweph.init() returned null or undefined');
@@ -694,8 +689,6 @@ self.onmessage = function(e) {
             basePath = basePath.replace(/\/+$/, '') + '/';
             const baseUrl = basePath + 'ephe/';
 
-            console.log(`[Worker] Loading ephemeris files from: ${baseUrl}`);
-
             let loadedCount = 0;
             for (const file of files) {
               try {
@@ -709,11 +702,9 @@ self.onmessage = function(e) {
                   }
                   swInstance.wasm.FS.createDataFile(epheDir, file, data, true, true, true);
                   loadedCount++;
-                } else {
-                  console.warn(`Failed to fetch ${file}: ${res.status}`);
                 }
               } catch (err) {
-                console.warn(`Error fetching ${file}:`, err);
+                // Ignore fetch errors silently to reduce noise
               }
             }
 
@@ -724,17 +715,15 @@ self.onmessage = function(e) {
               swInstance.wasm._swe_set_ephe_path(ptr);
               swInstance.wasm._free(ptr);
               epheLoaded = true;
-              console.log(`Successfully loaded ${loadedCount} ephemeris files in worker.`);
-              console.log('[Worker] INIT_SW completed successfully, posting INIT_COMPLETE');
+              console.log(`[Astronomy] Loaded ${loadedCount} ephemeris files.`);
               self.postMessage({ type: 'INIT_COMPLETE' });
             } else {
-              console.warn('No ephemeris files could be loaded in worker, falling back to Moshier');
               epheLoaded = false;
-              console.log('[Worker] INIT_SW completed with fallback, posting INIT_COMPLETE');
+              console.log('[Astronomy] No ephemeris loaded, using Moshier fallback.');
               self.postMessage({ type: 'INIT_COMPLETE' });
             }
           } catch (error) {
-            console.error('Worker initialization error:', error);
+            console.error('[Astronomy Worker] Initialization error:', error);
             self.postMessage({ type: 'ERROR', error: error.message });
           }
         })();
@@ -746,11 +735,6 @@ self.onmessage = function(e) {
         break;
 
       case 'CALC_VOC':
-        console.log('[Worker] CALC_VOC received, workerInitialized:', workerInitialized, 'swInstance:', swInstance);
-        console.log('[Worker] swInstance type:', typeof swInstance);
-        if (swInstance) {
-          console.log('[Worker] swInstance has swe_julday:', typeof swInstance.swe_julday);
-        }
         if (!workerInitialized || !swInstance) {
           self.postMessage({ type: 'ERROR', error: 'Worker not properly initialized' });
           break;
@@ -760,11 +744,6 @@ self.onmessage = function(e) {
         break;
 
       case 'CALC_ASTRO_DETAILS':
-        console.log('[Worker] CALC_ASTRO_DETAILS received, workerInitialized:', workerInitialized, 'swInstance:', swInstance);
-        console.log('[Worker] swInstance type:', typeof swInstance);
-        if (swInstance) {
-          console.log('[Worker] swInstance has swe_julday:', typeof swInstance.swe_julday);
-        }
         if (!workerInitialized || !swInstance) {
           self.postMessage({ type: 'ERROR', error: 'Worker not properly initialized' });
           break;

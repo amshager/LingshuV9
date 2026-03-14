@@ -1,6 +1,6 @@
 
 /* js/modules/bazi.js */
-import { computeGanzhi, getWuXingFromNayin } from './ganzhi.js';
+import { computeGanzhi, getWuXingFromNayin, toTrueSolarClockDate } from './ganzhi.js';
 import { updateCalendarView, setOnDateSelect, getLunarPhaseStatus } from './calendar.js';
 import { calculateAstroData, fetchVocDataLocal, fetchAstroDetailsLocal } from './astrology.js';
 import { calculateSanHeXiu, calculateLunarMansion, checkMieMo } from './luck.js'; 
@@ -141,7 +141,7 @@ function updateGpsUI(lat, lon, accuracy, type, manualName = null) {
 
 // GPS 初始化
 // Aspect calculation logic
-function calculateAspects(planets) {
+function calculateAspects(planets, showMinorAspects = false) {
     const aspects = [];
     const targetAngles = [
         { name: 'conjunction', angle: 0, symbol: '☌' },
@@ -150,12 +150,20 @@ function calculateAspects(planets) {
         { name: 'trine', angle: 120, symbol: '△' },
         { name: 'opposition', angle: 180, symbol: '☍' }
     ];
+    
+    if (showMinorAspects) {
+        targetAngles.push(
+            { name: 'semi-sextile', angle: 30, symbol: '⚺' },
+            { name: 'quincunx', angle: 150, symbol: '⚻' }
+        );
+    }
+    
     const moieties = {
         'Sun': 7.5,
         'Moon': 6.0,
         'Mercury': 3.5,
         'Venus': 3.5,
-        'Mars': 4.0,
+        'Mars': 3.5,
         'Jupiter': 4.5,
         'Saturn': 4.5,
         'Uranus': 2.5,
@@ -655,6 +663,35 @@ function resetNow() {
     updateAll(); 
 }
 
+function getStdToSolar(stdIsoStr, lon) {
+    if (!stdIsoStr) return "";
+    const stdDate = new Date(stdIsoStr);
+    if (isNaN(stdDate.getTime())) return "";
+    const tzOffsetMinutes = -stdDate.getTimezoneOffset();
+    const { trueSolarClock } = toTrueSolarClockDate({ dateUTC: stdDate, lon, tzOffsetMinutes });
+    const pad = n => n.toString().padStart(2, '0');
+    return `${trueSolarClock.getUTCFullYear()}-${pad(trueSolarClock.getUTCMonth()+1)}-${pad(trueSolarClock.getUTCDate())}T${pad(trueSolarClock.getUTCHours())}:${pad(trueSolarClock.getUTCMinutes())}:${pad(trueSolarClock.getUTCSeconds())}`;
+}
+
+function getSolarToStd(solarIsoStr, lon) {
+    if (!solarIsoStr) return "";
+    const parts = solarIsoStr.split(/\D/);
+    if(parts.length < 5) return "";
+    const y = parseInt(parts[0]), m = parseInt(parts[1])-1, d = parseInt(parts[2]), h = parseInt(parts[3]), min = parseInt(parts[4]);
+    const sec = parts.length > 5 && parts[5] ? parseInt(parts[5]) : 0;
+    const targetTrueSolarMs = Date.UTC(y, m, d, h, min, sec);
+    
+    let stdDate = new Date(y, m, d, h, min, sec);
+    for(let i=0; i<3; i++) {
+        const tzOffsetMinutes = -stdDate.getTimezoneOffset();
+        const { trueSolarClock } = toTrueSolarClockDate({ dateUTC: stdDate, lon, tzOffsetMinutes });
+        const errorMs = trueSolarClock.getTime() - targetTrueSolarMs;
+        stdDate = new Date(stdDate.getTime() - errorMs);
+    }
+    const localIso = new Date(stdDate.getTime() - (stdDate.getTimezoneOffset() * 60000)).toISOString().slice(0, 19);
+    return localIso;
+}
+
 function saveSettings() {
     const tVal = UI.inputTime.value;
     const latVal = parseFloat(UI.inputLat.value);
@@ -733,9 +770,142 @@ function initCitySelectors() {
             if (Array.isArray(coords) && coords.length === 2) {
                 UI.inputLon.value = coords[0];
                 UI.inputLat.value = coords[1];
+                if (UI.inputLon) UI.inputLon.dispatchEvent(new Event('input'));
             }
         }
     });
+}
+
+// --- 九宫飞星逻辑 ---
+// 存储多层飞星数据，每层是一个长为9的数组
+let flyLayers = [];
+
+function renderJiugong() {
+    if (!UI.jiugongGrid) return;
+    
+    const startPalace = parseInt(UI.jgStartPalace.value);
+    const startNum = parseInt(UI.jgStartNum.value);
+    const direction = parseInt(UI.jgDirection.value);
+    
+    // 洛书九宫飞星顺序
+    const flyPath = [5, 6, 7, 8, 9, 1, 2, 3, 4];
+    
+    // 宫位对应的视觉网格索引 (0-8)
+    const palaceToGrid = {
+        4: 0, 9: 1, 2: 2,
+        3: 3, 5: 4, 7: 5,
+        8: 6, 1: 7, 6: 8
+    };
+    
+    // 九星名称与颜色 (移除文字，只保留颜色)
+    // 根据主题自适应调整颜色
+    const isGoldTheme = document.body.classList.contains('gold-theme');
+    
+    const starInfo = {
+        1: { color: isGoldTheme ? '#64748b' : '#e2e8f0' }, // 白
+        2: { color: isGoldTheme ? '#1e293b' : '#64748b' }, // 黑
+        3: { color: '#10b981' }, // 碧
+        4: { color: '#22c55e' }, // 绿
+        5: { color: '#f59e0b' }, // 黄
+        6: { color: isGoldTheme ? '#64748b' : '#e2e8f0' }, // 白
+        7: { color: '#ef4444' }, // 赤
+        8: { color: isGoldTheme ? '#64748b' : '#e2e8f0' }, // 白
+        9: { color: '#a855f7' }  // 紫
+    };
+    
+    const startIndex = flyPath.indexOf(startPalace);
+    const newLayer = new Array(9);
+    
+    for (let i = 0; i < 9; i++) {
+        const currentPalace = flyPath[(startIndex + i) % 9];
+        let currentNum = startNum + (i * direction);
+        while (currentNum <= 0) currentNum += 9;
+        while (currentNum > 9) currentNum -= 9;
+        
+        const gridIndex = palaceToGrid[currentPalace];
+        newLayer[gridIndex] = currentNum;
+    }
+    
+    // 添加到层级中，最多保留5层
+    flyLayers.push(newLayer);
+    if (flyLayers.length > 5) {
+        flyLayers.shift(); // 移除最老的一层
+    }
+    
+    drawJiugongGrid();
+}
+
+// 修改飞星按钮行为，右键/长按可以清空
+if (UI.btnFlyStars) {
+    // 监听逻辑已在 mountBazi 中添加，这里只需实现 drawJiugongGrid
+}
+
+function drawJiugongGrid() {
+    if (!UI.jiugongGrid) return;
+    UI.jiugongGrid.innerHTML = '';
+    
+    const isGoldTheme = document.body.classList.contains('gold-theme');
+    const starInfo = {
+        1: { color: isGoldTheme ? '#64748b' : '#e2e8f0' }, // 白
+        2: { color: isGoldTheme ? '#1e293b' : '#64748b' }, // 黑
+        3: { color: '#10b981' }, // 碧
+        4: { color: '#22c55e' }, // 绿
+        5: { color: '#f59e0b' }, // 黄
+        6: { color: isGoldTheme ? '#64748b' : '#e2e8f0' }, // 白
+        7: { color: '#ef4444' }, // 赤
+        8: { color: isGoldTheme ? '#64748b' : '#e2e8f0' }, // 白
+        9: { color: '#a855f7' }  // 紫
+    };
+    
+    // 生成9个格子
+    for (let gridIdx = 0; gridIdx < 9; gridIdx++) {
+        const cell = document.createElement('div');
+        cell.style.cssText = `
+            background: var(--bg-card);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-content: center;
+            gap: 4px;
+            padding: 4px;
+            position: relative;
+            overflow: hidden;
+        `;
+        
+        // 渲染该格子内的所有层数字
+        flyLayers.forEach((layer, layerIdx) => {
+            const num = layer[gridIdx];
+            const info = starInfo[num];
+            const numEl = document.createElement('div');
+            
+            // 动态调整字体大小：层数越多，字越小
+            const fontSize = flyLayers.length <= 1 ? '2.5em' : 
+                             flyLayers.length <= 2 ? '1.8em' : 
+                             flyLayers.length <= 4 ? '1.4em' : '1.2em';
+                             
+            // 根据主题和数字优化1、6、8白星的颜色，避免金色主题下不显眼
+            let finalColor = info.color;
+            if (isGoldTheme && [1, 6, 8].includes(num)) {
+                finalColor = '#52525b'; // 在金色主题下，使用更深的灰偏蓝色
+            }
+                             
+            numEl.style.cssText = `
+                font-size: ${fontSize};
+                font-weight: bold;
+                color: ${finalColor};
+                line-height: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            
+            // 第一个飞布（最底层的盘）在背景放个极大的数字当底色水印（可选），这里我们选择简单并排
+            numEl.innerText = num;
+            cell.appendChild(numEl);
+        });
+        
+        UI.jiugongGrid.appendChild(cell);
+    }
 }
 
 function renderAstroChart() {
@@ -744,7 +914,8 @@ function renderAstroChart() {
 
     chartContainer.innerHTML = '';
     try {
-        const showOuter = document.getElementById('chart-show-outer')?.checked ?? true;
+        const showOuter = document.getElementById('chart-show-outer')?.checked ?? false;
+        const showMinorAspects = document.getElementById('chart-show-minor-aspects')?.checked ?? false;
         const outerPlanets = ['Uranus', 'Neptune', 'Pluto'];
 
         const radixData = {
@@ -757,7 +928,7 @@ function renderAstroChart() {
             }
         });
         
-        const aspects = calculateAspects(currentHoroscopeData.planets.filter(p => showOuter || !outerPlanets.includes(p.nameEn)));
+        const aspects = calculateAspects(currentHoroscopeData.planets.filter(p => showOuter || !outerPlanets.includes(p.nameEn)), showMinorAspects);
         
         // 获取容器宽度
         const size = chartContainer.clientWidth || 500;
@@ -840,24 +1011,27 @@ function renderAstroChart() {
         // 设置缩放逻辑
         const zoomSlider = document.getElementById('chart-zoom-slider');
         if (zoomSlider) {
-            zoomSlider.value = 1; // 重置缩放
-            zoomSlider.oninput = (e) => {
-                const scale = parseFloat(e.target.value);
+            const currentScale = parseFloat(zoomSlider.value) || 1.25;
+            
+            // 立即应用初始缩放以防止第一次打开时 SVG 过大
+            const applyZoom = (scale) => {
                 const svg = chartContainer.querySelector('svg');
                 if (svg) {
-                    const oldWidth = parseFloat(svg.getAttribute('width'));
+                    const oldWidth = parseFloat(svg.getAttribute('width')) || size;
                     const newWidth = size * scale;
-                    
-                    // 直接改变 SVG 的宽高属性，浏览器会根据 viewBox 自动缩放内容
-                    // 这样也能让外层容器的 overflow: auto 正常工作，出现滚动条
                     svg.setAttribute('width', newWidth);
                     svg.setAttribute('height', newWidth);
-                    
-                    // 调整滚动条位置以保持中心缩放
                     const scrollDiff = (newWidth - oldWidth) / 2;
                     chartContainer.scrollLeft += scrollDiff;
                     chartContainer.scrollTop += scrollDiff;
                 }
+            };
+            
+            // AstroChart render is synchronous mostly, but use timeout just in case the SVG isn't fully injected
+            setTimeout(() => applyZoom(currentScale), 50);
+
+            zoomSlider.oninput = (e) => {
+                applyZoom(parseFloat(e.target.value));
             };
         }
 
@@ -921,10 +1095,15 @@ export function mountBazi() {
     
     if(UI.btnSettings) UI.btnSettings.addEventListener('click', () => {
         const now = state.manualDate;
-        const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+        const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 19);
         UI.inputTime.value = localIso;
         UI.inputLat.value = state.lat; 
         UI.inputLon.value = state.lon;
+        
+        if (UI.inputTimeSolar) {
+            UI.inputTimeSolar.value = getStdToSolar(localIso, state.lon);
+        }
+
         // Reset selectors on open (optional, or keep them stateful)
         UI.selProv.value = "";
         UI.selCity.innerHTML = `<option value="">- 市 -</option>`;
@@ -932,6 +1111,52 @@ export function mountBazi() {
         
         UI.modal.classList.remove('hidden');
     });
+
+    // 真太阳时和标准时间双向绑定
+    if (UI.inputTime && UI.inputTimeSolar && UI.inputLon) {
+        UI.inputTime.addEventListener('input', () => {
+            const lon = parseFloat(UI.inputLon.value) || state.lon;
+            UI.inputTimeSolar.value = getStdToSolar(UI.inputTime.value, lon);
+        });
+
+        UI.inputTimeSolar.addEventListener('input', () => {
+            const lon = parseFloat(UI.inputLon.value) || state.lon;
+            UI.inputTime.value = getSolarToStd(UI.inputTimeSolar.value, lon);
+        });
+
+        UI.inputLon.addEventListener('input', () => {
+            const lon = parseFloat(UI.inputLon.value) || state.lon;
+            if (UI.inputTime.value) {
+                UI.inputTimeSolar.value = getStdToSolar(UI.inputTime.value, lon);
+            }
+        });
+    }
+
+    // 九宫飞星相关事件
+    if (UI.btnJiugong) {
+        UI.btnJiugong.addEventListener('click', () => {
+            if (UI.jiugongOverlay.classList.contains('hidden')) {
+                UI.jiugongOverlay.classList.remove('hidden');
+                UI.btnJiugong.classList.add('active'); // 可选：给按钮加个激活状态样式
+                // 如果是第一次打开且没有飞星，自动飞一次
+                if (flyLayers.length === 0) {
+                    renderJiugong();
+                }
+            } else {
+                UI.jiugongOverlay.classList.add('hidden');
+                UI.btnJiugong.classList.remove('active');
+            }
+        });
+    }
+    if (UI.btnFlyStars) {
+        UI.btnFlyStars.addEventListener('click', renderJiugong);
+        // 添加清空飞星的功能 (长按或右键)
+        UI.btnFlyStars.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            flyLayers = [];
+            drawJiugongGrid();
+        });
+    }
 
     if(UI.gpsIndicator) UI.gpsIndicator.addEventListener('click', () => {
         const targetDate = state.manualDate;
@@ -1064,6 +1289,15 @@ export function mountBazi() {
         });
     }
 
+    const chartShowMinorAspects = document.getElementById('chart-show-minor-aspects');
+    if (chartShowMinorAspects) {
+        chartShowMinorAspects.addEventListener('change', () => {
+            if (currentHoroscopeData && UI.horoscopeModal && !UI.horoscopeModal.classList.contains('hidden')) {
+                UI.btnViewHoroscope.click();
+            }
+        });
+    }
+
     if (UI.btnViewHoroscope && UI.horoscopeModal) {
         UI.btnViewHoroscope.addEventListener('click', () => {
             if (currentHoroscopeData) {
@@ -1082,7 +1316,7 @@ export function mountBazi() {
                 html += '</div>';
                 
                 // Planets
-                const showOuter = document.getElementById('chart-show-outer')?.checked ?? true;
+                const showOuter = document.getElementById('chart-show-outer')?.checked ?? false;
                 const outerPlanets = ['Uranus', 'Neptune', 'Pluto'];
                 const filteredPlanets = currentHoroscopeData.planets.filter(p => showOuter || !outerPlanets.includes(p.nameEn));
 
@@ -1098,10 +1332,11 @@ export function mountBazi() {
                 html += '</div>';
 
                 // Aspects
-                const aspects = calculateAspects(filteredPlanets);
-                const aspectNames = { 0: '合相', 60: '六分', 90: '四分', 120: '三分', 180: '对分' };
+                const showMinorAspects = document.getElementById('chart-show-minor-aspects')?.checked ?? false;
+                const aspects = calculateAspects(filteredPlanets, showMinorAspects);
+                const aspectNames = { 0: '合相', 30: '半六分', 60: '六分', 90: '四分', 120: '三分', 150: '梅花', 180: '对分' };
                 
-                const titleStr = showOuter ? '主要相位 (容许度)' : '七星相位 (容许度)';
+                const titleStr = showOuter ? '星盘相位 (容许度)' : '七星相位 (容许度)';
                 html += `<div class="aspects-panel" style="background: var(--bg-panel); padding: 8px; border-radius: 4px;"><h4 style="margin: 0 0 8px 0; color: var(--text-sub); font-size: 0.9em; border-bottom: 1px solid var(--border-lite);">${titleStr}</h4>`;
                 if (aspects.length === 0) {
                     html += '<div style="color: var(--text-sub); font-size: 0.85em;">无主要相位</div>';

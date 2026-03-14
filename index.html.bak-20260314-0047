@@ -54,9 +54,8 @@
                     <div class="cw-ring" id="cw-ring"></div>
                     <div class="cw-level-area"><div class="cw-level-dot" id="level-dot"></div></div>
                 </div>
-                <div class="degree-display" style="position: relative;">
+                <div class="degree-display">
                     <span id="deg-num">--</span>° <span id="dir-txt">--</span>
-                    <button id="btn-jiugong" class="btn-outline" style="position: absolute; right: -30px; bottom: 0; width: 22px; height: 22px; padding: 0; font-size: 12px; line-height: 1; border-radius: 4px; border-color: var(--border-color); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; z-index: 10;" title="九宫飞星">九</button>
                 </div>
                 
                 <!-- 中轴：移动到这里，作为左侧容器的子元素，锚定到右边缘 -->
@@ -91,60 +90,7 @@
         </header>
 
         <!-- 主内容区 (日历) -->
-        <main class="main-content" style="position: relative;">
-            <!-- 九宫飞星覆盖层 -->
-            <div id="jiugong-overlay" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-card); z-index: 50; display: flex; flex-direction: column; padding: 12px; box-sizing: border-box;">
-                <!-- 移除了原有的带关闭按钮的头部标题 -->
-
-                <div class="jiugong-controls" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 0.9em; flex-shrink: 0; margin-top: 10px;">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>起宫</label>
-                        <select id="jg-start-palace" class="input-dark">
-                            <option value="1">坎宫(1)</option>
-                            <option value="2">坤宫(2)</option>
-                            <option value="3">震宫(3)</option>
-                            <option value="4">巽宫(4)</option>
-                            <option value="5" selected>中宫(5)</option>
-                            <option value="6">乾宫(6)</option>
-                            <option value="7">兑宫(7)</option>
-                            <option value="8">艮宫(8)</option>
-                            <option value="9">离宫(9)</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>起星</label>
-                        <select id="jg-start-num" class="input-dark">
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5" selected>5</option>
-                            <option value="6">6</option>
-                            <option value="7">7</option>
-                            <option value="8">8</option>
-                            <option value="9">9</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>顺逆</label>
-                        <select id="jg-direction" class="input-dark">
-                            <option value="1" selected>顺飞</option>
-                            <option value="-1">逆飞</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; align-items: flex-end; gap: 4px;">
-                        <button id="btn-fly-stars" class="btn-primary" style="width: 100%; padding: 6px;">飞布</button>
-                    </div>
-                </div>
-
-                <div style="text-align: center; font-size: 0.75em; color: var(--text-secondary); margin-bottom: 8px;">* 多次点击叠加飞星，长按【飞布】按钮清空</div>
-
-                <!-- 九宫格图形 -->
-                <div id="jiugong-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); aspect-ratio: 1; gap: 2px; background: var(--border-color); border: 2px solid var(--border-color); width: 100%; max-width: 320px; margin: 0 auto; flex-shrink: 0;">
-                    <!-- 格子内容由 JS 生成 -->
-                </div>
-            </div>
-
+        <main class="main-content">
             <div class="cal-container">
                 <!-- 移除背景水印 -->
                 
@@ -289,10 +235,7 @@
                 <div class="modal-content" style="max-width: 800px; width: 98%; max-height: 95vh; overflow-y: auto; padding: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
                         <h3 style="margin: 0; color: var(--text-main); font-size: 1.1em;">当前星盘 (Regiomontanus)</h3>
-                        <div style="display: flex; gap: 8px;">
-                            <button id="btn-toggle-radix" class="btn-outline" style="padding: 4px 8px; font-size: 0.8em; width: auto;">设置外圈</button>
-                            <button id="btn-close-horoscope" class="btn-outline" style="padding: 4px 12px; font-size: 1.1em; width: auto; line-height: 1;">×</button>
-                        </div>
+                        <button id="btn-toggle-radix" class="btn-outline" style="padding: 4px 8px; font-size: 0.8em; width: auto;">设置本命盘 (外圈)</button>
                     </div>
                     
                     <!-- 本命盘设置面板 (默认隐藏) -->
@@ -329,13 +272,10 @@
                         <div style="display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 0.85em; color: var(--text-secondary);">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span>缩放星盘:</span>
-                                <input type="range" id="chart-zoom-slider" min="0.5" max="2" step="0.1" value="1.25" style="width: 150px;">
+                                <input type="range" id="chart-zoom-slider" min="0.5" max="2" step="0.1" value="1" style="width: 150px;">
                             </div>
                             <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                                <input type="checkbox" id="chart-show-outer"> 显示三王星
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                                <input type="checkbox" id="chart-show-minor-aspects"> 30°/150°
+                                <input type="checkbox" id="chart-show-outer" checked> 显示三王星
                             </label>
                         </div>
                         <!-- 图形星盘容器 -->
@@ -345,6 +285,10 @@
                         <div id="horoscope-data-container" style="font-size: 0.8em; line-height: 1.4;">
                             <!-- Data will be injected here -->
                         </div>
+                    </div>
+
+                    <div class="form-actions" style="margin-top: 16px;">
+                        <button id="btn-close-horoscope" class="btn-outline" style="width: 100%;">关闭</button>
                     </div>
                 </div>
             </div>
@@ -370,8 +314,7 @@
         <div id="settings-modal" class="modal hidden">
             <div class="modal-content">
                 <h3>高级设定</h3>
-                <div class="form-group"><label>指定时间 (法定时间)</label><input type="datetime-local" id="set-time" class="input-dark" step="1"></div>
-                <div class="form-group"><label>真太阳时</label><input type="datetime-local" id="set-time-solar" class="input-dark" title="自动根据经度与平太阳时换算" step="1"></div>
+                <div class="form-group"><label>指定时间</label><input type="datetime-local" id="set-time" class="input-dark"></div>
                 
                 <!-- 新增：城市选择器 -->
                 <div class="form-group">
