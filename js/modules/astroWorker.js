@@ -807,7 +807,13 @@ self.onmessage = function(e) {
             let loadedCount = 0;
             for (const file of files) {
               try {
-                const res = await fetch(baseUrl + file);
+                // 设置请求超时，因为如果网络极差卡住，会导致 fetch 一直等待，最终超过主线程的 Worker 初始化超时时间被意外杀掉而报错退出程序。这里设置一个独立的超时机制以实现安全的离线/Moshier降级。
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000); 
+
+                const res = await fetch(baseUrl + file, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
                 if (res.ok) {
                   const buffer = await res.arrayBuffer();
                   const data = new Uint8Array(buffer);

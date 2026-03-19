@@ -125,7 +125,12 @@ export async function getSweph() {
             let loadedCount = 0;
             for (const file of files) {
                 try {
-                    const res = await fetch(baseUrl + file);
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+                    const res = await fetch(baseUrl + file, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+
                     if (res.ok) {
                         const buffer = await res.arrayBuffer();
                         const data = new Uint8Array(buffer);
@@ -225,7 +230,7 @@ function initAstroWorker() {
             timeoutId = setTimeout(() => {
                 cleanup(new Error('Worker initialization timeout'));
                 reject(new Error('Worker initialization timeout'));
-            }, 10000);
+            }, 20000);
 
             // Initialize the worker
             let basePath = '/';
