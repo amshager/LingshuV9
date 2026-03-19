@@ -183,13 +183,8 @@ function initAstroWorker() {
 
     workerPromise = new Promise((resolve, reject) => {
         try {
-            // Determine the correct path for the worker file
-            let workerPath = './js/modules/astroWorker.js';
-            if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) {
-                workerPath = import.meta.env.BASE_URL + 'js/modules/astroWorker.js';
-            }
-
-            const worker = new Worker(workerPath, { type: 'module' });
+            // Use Vite's standard web worker URL pattern for proper bundling
+            const worker = new Worker(new URL('./astroWorker.js', import.meta.url), { type: 'module' });
             let settled = false;
             let timeoutId = null;
             const cleanup = (err) => {
