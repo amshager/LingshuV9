@@ -369,13 +369,45 @@
                     <span class="d-label">角距</span>
                     <span id="moon-angle" class="d-val">--°</span>
                 </div>
-                <div class="detail-item">
-                    <span class="d-label">模式</span>
-                    <span id="mode-display" class="d-val">--</span>
+                <div class="detail-item" id="btn-about" style="cursor: pointer;">
+                    <span class="d-label" style="text-decoration: underline; color: var(--gold);">关于</span>
+                    <span id="mode-display" class="d-val" style="display:none;">--</span>
                 </div>
             </div>
         </main>
-
+        <!-- 关于弹窗 -->
+        <div id="about-modal" class="modal hidden">
+            <div class="modal-content" style="max-width: 400px; padding: 25px; text-align: center;">
+                <h2 style="margin: 0 0 5px 0; color: var(--gold); font-family: 'Song', serif;">灵枢 V9.3</h2>
+                <p style="margin: 0; font-size: 0.85em; color: var(--text-sub);">Made by <b>amshager</b></p>
+                
+                <div style="text-align: left; margin-top: 25px; font-size: 0.9em; background: var(--bg-dark); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
+                        <span style="font-size: 1.2em;">🌑</span>
+                        <div>
+                            <strong>Astronomy Engine</strong><br>
+                            <span style="color: #4CAF50; font-size: 0.9em;">🟢 核心已挂载 (本地静态包)</span>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
+                        <span style="font-size: 1.2em;">🌌</span>
+                        <div>
+                            <strong>Swiss Ephemeris (WASM)</strong><br>
+                            <span id="status-sweph" style="color: var(--text-sub); font-size: 0.9em;">⚪ 状态获取中...</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: flex-start; gap: 8px;">
+                        <span style="font-size: 1.2em;">📉</span>
+                        <div>
+                            <strong>Moshier 解析算法</strong><br>
+                            <span id="status-moshier" style="color: var(--text-sub); font-size: 0.9em;">⚪ 状态获取中...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="btn-close-about" class="btn-outline" style="margin-top: 25px; padding: 6px 25px; border-radius: 6px;">确定</button>
+            </div>
+        </div>
         <!-- 设置弹窗 -->
         <div id="settings-modal" class="modal hidden">
             <div class="modal-content">

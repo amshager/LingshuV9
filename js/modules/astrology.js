@@ -205,6 +205,12 @@ function initAstroWorker() {
                 const { type, data, error } = e.data;
                 if (type === 'INIT_COMPLETE') {
                     console.log('[Astronomy] Worker initialized successfully');
+                    // Store state globally for About dialog
+                    window.__LingshuAstroState = { 
+                        workerInit: true, 
+                        epheLoaded: data?.epheLoaded, 
+                        loadedCount: data?.loadedCount 
+                    };
                     astroWorker = worker; // Only set astroWorker after successful initialization
                     cleanup();
                     resolve(astroWorker);

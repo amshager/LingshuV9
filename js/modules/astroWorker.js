@@ -837,11 +837,11 @@ self.onmessage = function(e) {
               swInstance.wasm._free(ptr);
               epheLoaded = true;
               console.log(`[Astronomy] Loaded ${loadedCount} ephemeris files.`);
-              self.postMessage({ type: 'INIT_COMPLETE', requestId });
+              self.postMessage({ type: 'INIT_COMPLETE', requestId, data: { epheLoaded: true, loadedCount: loadedCount } });
             } else {
               epheLoaded = false;
               console.log('[Astronomy] No ephemeris loaded, using Moshier fallback.');
-              self.postMessage({ type: 'INIT_COMPLETE', requestId });
+              self.postMessage({ type: 'INIT_COMPLETE', requestId, data: { epheLoaded: false, loadedCount: 0 } });
             }
           } catch (error) {
             console.error('[Astronomy Worker] Initialization error:', error);
