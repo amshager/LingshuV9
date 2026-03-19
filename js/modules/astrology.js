@@ -230,10 +230,10 @@ function initAstroWorker() {
             // Initialize the worker
             let basePath = '/';
             if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) {
-                basePath = import.meta.env.BASE_URL;
+                basePath = new URL(import.meta.env.BASE_URL, window.location.href).href;
             } else {
                 // Fallback for non-Vite environments
-                basePath = window.location.pathname.replace(/\/[^\/]*$/, '/');
+                basePath = new URL('./', window.location.href).href;
             }
             worker.postMessage({ type: 'INIT_SW', data: { basePath } });
         } catch (error) {
