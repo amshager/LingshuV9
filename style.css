@@ -944,7 +944,7 @@ body {
     #horoscope-data-grid {
         grid-template-columns: 1fr 1fr;
     }
-    .aspects-panel {
+    .bottom-panels {
         grid-column: 1 / -1;
     }
     .horoscope-layout {
@@ -957,8 +957,8 @@ body {
         align-items: flex-start;
     }
     #astro-chart-container {
-        width: 55% !important;
-        max-width: 500px;
+        width: 65% !important;
+        max-width: 800px;
     }
     #horoscope-data-container {
         width: 45% !important;

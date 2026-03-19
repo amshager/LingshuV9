@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@astrodraw/astrochart": "^3.0.2",
+    "jsdom": "^29.0.0",
     "sweph-wasm": "^2.6.9"
   }
 }

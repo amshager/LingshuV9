@@ -35,6 +35,20 @@ let state = {
     radixData: null // Store radix data for outer ring
 };
 
+// 星座着色 Helper (全局可用)
+window.styleZodiacIcon = function(icon) {
+    if (!icon) return '';
+    const nameToIcon = { '白羊座':'♈', '金牛座':'♉', '双子座':'♊', '巨蟹座':'♋', '狮子座':'♌', '处女座':'♍', '天秤座':'♎', '天蝎座':'♏', '射手座':'♐', '摩羯座':'♑', '水瓶座':'♒', '双鱼座':'♓' };
+    const actualIcon = nameToIcon[icon] || icon;
+    const icons = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+    const colors = ['#e53935', '#fbc02d', '#26c6da', '#42a5f5', '#e53935', '#fbc02d', '#26c6da', '#42a5f5', '#e53935', '#fbc02d', '#26c6da', '#42a5f5'];
+    const idx = icons.indexOf(actualIcon);
+    if (idx !== -1) {
+        return `<span style="color: ${colors[idx]}; font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Arial Unicode MS', 'Noto Sans Symbols', sans-serif; font-variant-emoji: text; font-weight: normal;">${actualIcon}&#xFE0E;</span>`;
+    }
+    return actualIcon;
+};
+
 // 五行映射表
 const WUXING_MAP = {
     '甲': 'mu', '乙': 'mu', '寅': 'mu', '卯': 'mu',
@@ -208,7 +222,24 @@ function calculateAspects(planets, showMinorAspects = false) {
             }
         }
     }
-    aspects.sort((a, b) => a.orb - b.orb);
+    aspects.sort((a, b) => {
+        // Priority 1: isApplying (true first: 入, false second: 出)
+        if (a.isApplying !== b.isApplying) {
+            return a.isApplying ? -1 : 1;
+        }
+        
+        // Priority 2: Planet name
+        const p1Order = allowedPlanets.indexOf(a.p1.nameEn);
+        const p2Order = allowedPlanets.indexOf(b.p1.nameEn);
+        if (p1Order !== p2Order) return p1Order - p2Order;
+        
+        const p1SubOrder = allowedPlanets.indexOf(a.p2.nameEn);
+        const p2SubOrder = allowedPlanets.indexOf(b.p2.nameEn);
+        if (p1SubOrder !== p2SubOrder) return p1SubOrder - p2SubOrder;
+        
+        // Priority 3: Orb size
+        return a.orb - b.orb;
+    });
     return aspects;
 }
 
@@ -319,7 +350,7 @@ async function fetchVocData(targetDate) {
             const ndd = nd.getDate().toString().padStart(2, '0');
             const nhh = nd.getHours().toString().padStart(2, '0');
             const nmin = nd.getMinutes().toString().padStart(2, '0');
-            const moonSign = nextAspect.moonPos ? nextAspect.moonPos.icon : '';
+            const moonSign = nextAspect.moonPos ? window.styleZodiacIcon(nextAspect.moonPos.icon) : '';
             
             nextAspectStr = `<span class="next-aspect-hint">${moonSign}☽${aSymbol}${pSymbol} ${ndd}-${nhh}:${nmin}</span>`;
         }
@@ -327,12 +358,12 @@ async function fetchVocData(targetDate) {
         if (data.isVoc) {
             UI.vocStatusIcon.innerText = '●';
             UI.vocStatusIcon.className = 'voc-active';
-            UI.vocStatusText.innerHTML = `<span class="voc-main-text">VOC ${data.currentMoonPos.icon}${data.currentMoonPos.str}</span>${nextAspectStr}`;
+            UI.vocStatusText.innerHTML = `<span class="voc-main-text">VOC ${window.styleZodiacIcon(data.currentMoonPos.icon)}${data.currentMoonPos.str}</span>${nextAspectStr}`;
             UI.vocStatusText.className = 'voc-active-text';
         } else {
             UI.vocStatusIcon.innerText = '○';
             UI.vocStatusIcon.className = '';
-            UI.vocStatusText.innerHTML = `<span class="voc-main-text">VOC ${data.currentMoonPos.icon}${data.currentMoonPos.str}</span>${nextAspectStr}`;
+            UI.vocStatusText.innerHTML = `<span class="voc-main-text">VOC ${window.styleZodiacIcon(data.currentMoonPos.icon)}${data.currentMoonPos.str}</span>${nextAspectStr}`;
             UI.vocStatusText.className = '';
         }
         
@@ -378,7 +409,7 @@ async function fetchVocData(targetDate) {
                     const isVocStart = data.lastAspect && item.type === 'aspect' && item.date === data.lastAspect.date;
                     
                     if (item.type === 'aspect') {
-                        const pName = planets[item.planet] || '未知';
+                        const pName = planets[item.planet] || item.planet;
                         const aName = aspectMap[item.angle] || `${item.angle}°`;
                         
                         let textColor = 'var(--text-main)';
@@ -391,17 +422,17 @@ async function fetchVocData(targetDate) {
                             textColor = 'var(--text-sub)'; // 过去的相位变灰
                         }
                         
-                        html += `<div class="voc-row" style="color: ${textColor}; padding: 4px 0;">
-                            <span class="voc-label" style="color: inherit;">${timeStr}</span>
-                            <span class="voc-val">☽ ${item.moonPos.icon} ${pName} ${aName}${extraText}</span>
+                        html += `<div class="voc-row" style="color: ${textColor}; padding: 4px 0; display:flex; justify-content:space-between;">
+                            <span class="voc-label" style="color: inherit; font-family:'JetBrains Mono', serif;">${timeStr}</span>
+                            <span class="voc-val">☽ ${window.styleZodiacIcon(item.moonPos.icon)} ${pName} ${aName}${extraText}</span>
                         </div>`;
                     } else if (item.type === 'ingress') {
                         let textColor = '#10b981'; // 绿色，代表安全/结束
                         if (item.jd < data.currentJd) textColor = 'var(--text-sub)';
                         
-                        html += `<div class="voc-row" style="color: ${textColor}; padding: 4px 0; margin-top: 2px;">
-                            <span class="voc-label" style="color: inherit;">${timeStr}</span>
-                            <span class="voc-val">☽ 进入 ${item.moonPos.icon}${item.moonPos.sign} <span style="font-size:0.85em; opacity:0.9;">[VOC结束]</span></span>
+                        html += `<div class="voc-row" style="color: ${textColor}; padding: 4px 0; margin-top: 2px; display:flex; justify-content:space-between;">
+                            <span class="voc-label" style="color: inherit; font-family:'JetBrains Mono', serif;">${timeStr}</span>
+                            <span class="voc-val">☽ 进入 ${window.styleZodiacIcon(item.moonPos.icon)}${item.moonPos.sign} <span style="font-size:0.85em; opacity:0.9;">[VOC结束]</span></span>
                         </div>`;
                     }
                 });
@@ -472,12 +503,11 @@ function renderMoonCalendarList(events) {
         }
 
         const timeStr = formatMoonCalTime(e.date);
-        const signText = `${e.sign}${e.deg.toString().padStart(2, '0')}°${e.min.toString().padStart(2, '0')}'`;
+        const signText = `${window.styleZodiacIcon(e.sign)}${e.deg.toString().padStart(2, '0')}°${e.min.toString().padStart(2, '0')}'`;
         const signClass = signClassMap[e.sign] || '';
         let aspectText = '';
         if (e.type === 'aspect') {
-            const symbol = aspectSymbolMap[e.aspect] || e.aspect;
-            aspectText = `${symbol} ${e.planet}`;
+            aspectText = `${e.aspect} ${e.planet}`;
         } else if (e.type === 'ingress') {
             aspectText = `进入 ${e.sign}`;
         }
@@ -1071,150 +1101,471 @@ function renderAstroChart() {
         const size = chartContainer.clientWidth || 500;
         const isMobile = size < 500;
         
+        let addedZodiacs = [];
+        
         const chart = new Chart('astro-chart-container', size, size, {
-            SYMBOL_SCALE: isMobile ? 0.7 : 0.9,
+            SYMBOL_SCALE: isMobile ? 0.5 : 0.6,
+            INNER_CIRCLE_RADIUS_RATIO: 12,
+            INDOOR_CIRCLE_RADIUS_RATIO: 2.8,
             MARGIN: isMobile ? 40 : 50,
-            COLOR_BACKGROUND: "#fff",
+            COLOR_BACKGROUND: "transparent",
             SHOW_ASPECTS: true,
             ASPECT_ORBS: { 'conjunction': 10, 'sextile': 6, 'square': 6, 'trine': 8, 'opposition': 10 },
             CUSTOM_SYMBOL_FN: function(name, x, y, context) {
-                if (name === 'Vertex') {
-                    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                    const scale = context.settings.SYMBOL_SCALE;
-                    g.setAttribute("transform", `translate(${x}, ${y}) scale(${scale})`);
-                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                    text.setAttribute("x", "0");
-                    text.setAttribute("y", "0");
-                    text.setAttribute("font-size", "14");
-                    text.setAttribute("fill", "#000");
-                    text.setAttribute("font-family", "sans-serif");
-                    text.setAttribute("font-weight", "bold");
-                    text.setAttribute("text-anchor", "middle");
-                    text.setAttribute("dominant-baseline", "central");
-                    text.textContent = "Vx";
-                    g.appendChild(text);
-                    return g;
-                }
-                return null;
-            }
-        });
-        
-        if (state.radixData) {
-            // Dual chart (Transit vs Radix)
-            const transitData = {
-                planets: {},
-                cusps: state.radixData.houses.map(h => h.lon)
+                  addedZodiacs.push({ name, x, y });
+                  const customNames = { 'Vertex': 'Vx', 'Pars Fortuna': '⊗', 'SNode': '☋' };
+                  if (customNames[name]) {
+                      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                      const scale = context.settings.SYMBOL_SCALE;
+                      g.setAttribute("transform", `translate(${x}, ${y}) scale(${scale})`);
+                      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                      text.setAttribute("x", "0");
+                      text.setAttribute("y", "0");
+                      text.setAttribute("font-size", "14");
+                      text.setAttribute("fill", "#000");
+                      text.setAttribute("font-family", "sans-serif");
+                      text.setAttribute("text-anchor", "middle");
+                      text.setAttribute("dominant-baseline", "central");
+                      text.classList.add("custom-keep-text");
+                      text.textContent = customNames[name];
+                      g.appendChild(text);
+                      return g;
+                  }
+                  return null;
+              }
+          });
+
+          // Draw the base chart
+          let transitDataForZodiac = window._transitDataTemp;
+          let radixChartInstance = null;
+
+          if (state.radixData) {
+              const transitData = {
+                  planets: {},
+                  cusps: state.radixData.houses.map(h => h.lon)
+              };
+              transitDataForZodiac = transitData;
+              state.radixData.planets.forEach(p => {
+                  if (showOuter || !outerPlanets.includes(p.nameEn)) {
+                      transitData.planets[p.nameEn] = [p.lon];
+                  }
+              });
+
+              radixChartInstance = chart.radix(transitData);
+              radixChartInstance.transit(radixData);
+              
+              const astroChartAspects = aspects.map((a, idx) => {
+                  const uniqueColor = '#' + idx.toString(16).padStart(6, '0');
+                  a._uniqueColor = uniqueColor;
+                  return {
+                      aspect: {
+                          name: a.type.name,
+                          degree: a.type.angle,
+                          color: uniqueColor
+                      },
+                      point: { name: a.p1.nameEn, position: a.p1.lon },
+                      toPoint: { name: a.p2.nameEn, position: a.p2.lon },
+                      precision: a.orb
+                  };
+              });
+              radixChartInstance.aspects(astroChartAspects);
+          } else {
+              const astroChartAspects = aspects.map((a, idx) => {
+                  const uniqueColor = '#' + idx.toString(16).padStart(6, '0');
+                  a._uniqueColor = uniqueColor;
+                  return {
+                      aspect: {
+                          name: a.type.name,
+                          degree: a.type.angle,
+                          color: uniqueColor
+                      },
+                      point: { name: a.p1.nameEn, position: a.p1.lon },
+                      toPoint: { name: a.p2.nameEn, position: a.p2.lon },
+                      precision: a.orb
+                  };
+              });
+              chart.radix(radixData).aspects(astroChartAspects);
+          }
+          
+          // Make transitDataForZodiac available globally to the timeout block
+          window._transitDataTemp = transitDataForZodiac;
+
+          setTimeout(() => {
+              try {
+                  const svg = chartContainer.querySelector('svg');
+                  if (svg) {
+                      // Remove native labels
+                  }
+
+                  // 1. Astrochart ring and cusp fixes
+                  if (svg) {
+                      const radius = size / 2 * 0.8;
+                      // 稍微收缩 outerRadius，让分宫线止步于星座圆环的内边缘
+                      const outerRadius = radius - (radius / 7);
+                      const innerRadius = radius / 2.8;
+
+                      // 精确计算最内圈真实的物理半径，专供分宫线的起点使用，防止由于内圈数字导致线悬空
+                      const actualMargin = isMobile ? 40 : 50;
+                      const lineStartRadius = ((size / 2) - actualMargin) / 2.8;
+                      const redrawCusps = (chartLayerId, houses) => {
+                          if (!houses) return;
+                          
+                          const layerGroup = chartContainer.querySelector(`g[id$="-${chartLayerId}-radix"]`) || svg.querySelector('g');
+                          if (!layerGroup) return;
+
+                          let cuspsGroup = chartContainer.querySelector(`#${chartLayerId}-cusps-custom`);
+                          if (!cuspsGroup) {
+                              cuspsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                              cuspsGroup.setAttribute('id', `${chartLayerId}-cusps-custom`);
+                              layerGroup.appendChild(cuspsGroup);
+                          } else {
+                              cuspsGroup.innerHTML = '';
+                          }
+
+                          const shift = 360 - houses[0].lon;
+                          const cx = size / 2;
+                          const cy = size / 2;
+
+                          
+
+                          // Draw inner ring border
+                          const houseRingOuter = innerRadius + 14 * (isMobile ? 0.5 : 0.6);
+                          const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                          ring.setAttribute('cx', cx.toString());
+                          ring.setAttribute('cy', cy.toString());
+                          ring.setAttribute('r', houseRingOuter.toString());
+                          ring.setAttribute('fill', 'none');
+                          ring.setAttribute('stroke', '#333');
+                          ring.setAttribute('stroke-width', '1');
+                          cuspsGroup.appendChild(ring);
+
+                          // Extend native house cusp lines to cross the planet track completely
+                          const nativeCuspsGroup = layerGroup.querySelector(`g[id$="-cusps"]`);
+                          if (nativeCuspsGroup) {
+                              nativeCuspsGroup.querySelectorAll('line').forEach(line => {
+                                  const x1 = parseFloat(line.getAttribute('x1'));
+                                  const y1 = parseFloat(line.getAttribute('y1'));
+                                  const x2 = parseFloat(line.getAttribute('x2'));
+                                  const y2 = parseFloat(line.getAttribute('y2'));
+                                  if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return;
+
+                                  const mx = (x1 + x2) / 2;
+                                  const my = (y1 + y2) / 2;
+                                  const vx = mx - cx;
+                                  const vy = my - cy;
+                                  const vDist = Math.sqrt(vx * vx + vy * vy);
+                                  
+                                  if (vDist > 0) {
+                                      const dirX = vx / vDist;
+                                      const dirY = vy / vDist;
+                                      // The line should extend from the inner house ring to the outer zodiac ring inner edge
+                                      line.setAttribute('x1', cx + dirX * lineStartRadius);
+                                      line.setAttribute('y1', cy + dirY * lineStartRadius);
+                                      line.setAttribute('x2', cx + dirX * outerRadius);
+                                      line.setAttribute('y2', cy + dirY * outerRadius);
+                                  }
+                              });
+                          }
+                      };
+
+                      const cleanupPointConnectorLines = (chartLayerId) => {
+                          const pointsGroup = chartContainer.querySelector(`g[id$="-${chartLayerId}-planets"]`); 
+                          if (!pointsGroup) return;
+
+                          pointsGroup.querySelectorAll('line').forEach(line => {
+                              const strokeWidth = parseFloat(line.getAttribute('stroke-width') || '0');
+                              // 原本移除的是小连接线，现在恢复并美化它（变细、变淡）
+                              if (strokeWidth <= (isMobile ? 0.5 : 0.6) * 0.55) {
+                                  line.setAttribute('stroke', 'rgba(120, 120, 120, 0.93)'); // 中灰半透明，肉眼可见且不刺眼
+                                  line.setAttribute('stroke-width', isMobile ? '0.5' : '0.6'); // 极细线 
+                              }
+                          });
+
+                          pointsGroup.querySelectorAll('text:not(.custom-keep-text)').forEach(t => t.remove());
+
+                          pointsGroup.querySelectorAll('[fill="#fff"], [fill="#ffffff"], [fill="none"][stroke="#fff"], [stroke="#ffffff"], circle[fill="white"]').forEach(el => {
+                              if (el.tagName.toLowerCase() === 'circle') {
+                                  el.setAttribute('r', (10 * (isMobile ? 0.5 : 0.6)).toString());
+                              } else {
+                                  el.setAttribute('stroke', 'transparent');
+                              }
+                          });
+                      };
+
+                      redrawCusps('radix', state.radixData?.houses ?? currentHoroscopeData?.houses);
+                      if (state.radixData) redrawCusps('transit', currentHoroscopeData?.houses);
+                      cleanupPointConnectorLines('radix');
+                      cleanupPointConnectorLines('transit');
+                  }
+                  
+                  // Zodiac overlays text logic
+                  if (!svg) return;
+                  const zGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                  zGroup.setAttribute("class", "zodiac-overlays");
+                  const cx = size / 2;
+                  const cy = size / 2;
+
+                  let transitDataForZodiac = window._transitDataTemp;
+                  addedZodiacs.forEach(p => {
+                      let lon = null;
+                      if (!transitDataForZodiac) {
+                          lon = radixData.planets[p.name] ? radixData.planets[p.name][0] : null;
+                      } else {
+                          const dx = p.x - cx;
+                          const dy = p.y - cy;
+                          const dist = Math.sqrt(dx*dx + dy*dy);
+                          if (dist > size * 0.35) {
+                              lon = radixData.planets[p.name] ? radixData.planets[p.name][0] : null;
+                          } else {
+                              lon = transitDataForZodiac.planets[p.name] ? transitDataForZodiac.planets[p.name][0] : null;
+                          }
+                      }
+
+                      if (lon !== null) {
+                          const signIdx = Math.floor(lon / 30);
+                          const degree = Math.floor(lon % 30);
+                          const minute = Math.floor((lon % 1) * 60);
+
+                          const signs = ['♈︎', '♉︎', '♊︎', '♋︎', '♌︎', '♍︎', '♎︎', '♏︎', '♐︎', '♑︎', '♒︎', '♓︎'];
+                          const colors = ['#e53935', '#fbc02d', '#26c6da', '#42a5f5', '#e53935', '#fbc02d', '#26c6da', '#42a5f5', '#e53935', '#fbc02d', '#26c6da', '#42a5f5'];
+                          
+                          const dx = p.x - cx;
+                          const dy = p.y - cy;
+                          const dist = Math.sqrt(dx*dx + dy*dy);
+                          const vx = dx / dist;
+                          const vy = dy / dist;
+
+                          const fSize = isMobile ? '8px' : '9px';
+                          
+                          const dDeg = isMobile ? 12 : 13;
+                          const dSign = dDeg + (isMobile ? 12 : 13);
+                          const dMin = dSign + (isMobile ? 12 : 13);
+
+                          // Place from planet toward center.
+                          // The sequence is: Star -> Degree -> Sign -> Minute
+                          // Star is at dist.
+                          const degR = dist - dDeg;
+                          const signR = dist - dSign;
+                          const minR = dist - dMin;
+
+                          const rSign = signR; // just mapping correctly
+
+                          const xMin = cx + vx * minR;
+                          const yMin = cy + vy * minR;
+                          const xSign = cx + vx * rSign;
+                          const ySign = cy + vy * rSign;
+                          const xDeg = cx + vx * degR;
+                          const yDeg = cy + vy * degR;
+
+                          const fStyle = `font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Arial Unicode MS', sans-serif; font-weight: normal; font-size: ${fSize}; dominant-baseline: central; text-anchor: middle;`;
+                          const strokeStyle = "stroke: #ffffff; stroke-width: 2.5px; stroke-linejoin: round; fill: none; paint-order: stroke fill;";
+                          const fillStyle = "fill: #333333;";
+                          const signFillStyle = `fill: ${colors[signIdx]};`;
+
+                          const createText = (x, y, style, content) => {
+                              const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                              t.setAttribute("x", x);
+                              t.setAttribute("y", y);
+                              t.setAttribute("style", style);
+
+                              let angle = Math.atan2(vy, vx) * 180 / Math.PI;
+                              // Force readable direction
+                              if (angle > 90) { angle -= 180; }
+                              else if (angle < -90) { angle += 180; }
+                              t.setAttribute("transform", "rotate(" + angle + ", " + x + ", " + y + ")");
+                              t.innerHTML = content;
+                              return t;
+                          };
+
+                          zGroup.appendChild(createText(xMin, yMin, fStyle + strokeStyle, minute + "'"));
+                          zGroup.appendChild(createText(xSign, ySign, fStyle + strokeStyle, signs[signIdx]));
+                          zGroup.appendChild(createText(xDeg, yDeg, fStyle + strokeStyle, degree + "&deg;"));
+
+                          zGroup.appendChild(createText(xMin, yMin, fStyle + fillStyle, minute + "'"));
+                          zGroup.appendChild(createText(xSign, ySign, fStyle + signFillStyle, signs[signIdx]));
+                          zGroup.appendChild(createText(xDeg, yDeg, fStyle + fillStyle, degree + "&deg;"));
+                      }
+                  });
+
+                  svg.appendChild(zGroup);
+
+                  // 处理相位线
+                  aspects.forEach(a => {
+                      if (!a._uniqueColor) return;
+                      const line = svg.querySelector(`*[stroke="${a._uniqueColor}"]`);
+                      if (line) {
+                          const realColor = a.type.name === 'conjunction' ? 'transparent' :
+                                            (a.type.name === 'square' || a.type.name === 'opposition' ? '#FF4500' : '#27AE60');
+                          line.setAttribute('stroke', realColor);
+                          if (!a.isApplying) {
+                              line.setAttribute('stroke-dasharray', '4,4'); // 分离相位
+                          }
+
+                          if (realColor !== 'transparent' && a.type.symbol) {
+                              let mx = 0, my = 0;
+                              if (line.tagName.toLowerCase() === 'line') {
+                                  mx = (parseFloat(line.getAttribute('x1')) + parseFloat(line.getAttribute('x2'))) / 2;
+                                  my = (parseFloat(line.getAttribute('y1')) + parseFloat(line.getAttribute('y2'))) / 2;
+                              } else if (line.tagName.toLowerCase() === 'path') {
+                                  const d = line.getAttribute('d');
+                                  const matches = d.match(/M\s*([-\d.]+)[,\s]+([-\d.]+)\s*L\s*([-\d.]+)[,\s]+([-\d.]+)/);
+                                  if (matches) {
+                                      mx = (parseFloat(matches[1]) + parseFloat(matches[3])) / 2;
+                                      my = (parseFloat(matches[2]) + parseFloat(matches[4])) / 2;
+                                  }
+                              }
+
+                              if (mx !== 0 && my !== 0) {
+                                  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                                  text.setAttribute("x", mx);
+                                  text.setAttribute("y", my);
+                                  text.setAttribute("font-size", "12");
+                                  text.setAttribute("fill", realColor);
+                                  text.setAttribute("font-family", "'Segoe UI Symbol', 'Apple Symbols', 'Arial Unicode MS', sans-serif");
+                                  text.setAttribute("text-anchor", "middle");
+                                  text.setAttribute("dominant-baseline", "central");
+                                  text.textContent = a.type.symbol;
+                                  // Append to a higher layer or zGroup so it renders on top
+                                  svg.appendChild(text);
+                              }
+                          }
+                      }
+                  });
+
+              } catch(err) { console.error(err); }
+          }, 50);
+
+        // --- 缩放与拖拽功能 ---
+        chartContainer.style.overflow = 'hidden';
+        chartContainer.style.touchAction = 'none'; // 防止移动端原生滚动干扰
+
+        let currentScale = isMobile ? 1.2 : 1.0; 
+        let translateX = 0;
+        let translateY = 0;
+        let isDragging = false;
+        let startX, startY;
+        let initialDistance = 0;
+        let initialScale = 1;
+
+        // 由于 Astrochart 渲染可能稍微滞后，放在 setTimeout 中查找SVG
+        setTimeout(() => {
+            const svgElement = chartContainer.querySelector('svg');
+            if (!svgElement) return;
+
+            // 设置原点为左上角，便于 translate 计算
+            svgElement.style.transformOrigin = '0 0';
+            
+            // 初始居中显示
+            const centerOffset = (size - size * currentScale) / 2;
+            translateX = centerOffset;
+            translateY = centerOffset;
+
+            const updateTransform = () => {
+                svgElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
             };
-            state.radixData.planets.forEach(p => {
-                if (showOuter || !outerPlanets.includes(p.nameEn)) {
-                    transitData.planets[p.nameEn] = [p.lon];
+            updateTransform();
+
+            // 鼠标事件 (PC端)
+            chartContainer.onmousedown = (e) => {
+                if (e.button !== 0) return; // 仅响应左键
+                isDragging = true;
+                startX = e.clientX - translateX;
+                startY = e.clientY - translateY;
+                chartContainer.style.cursor = 'grabbing';
+            };
+
+            chartContainer.onmousemove = (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                updateTransform();
+            };
+
+            chartContainer.onmouseup = chartContainer.onmouseleave = () => {
+                isDragging = false;
+                chartContainer.style.cursor = 'grab';
+            };
+
+            // 滚轮缩放 (PC端)
+            chartContainer.onwheel = (e) => {
+                e.preventDefault();
+                const zoomSensitivity = 0.002;
+                const delta = e.deltaY * -zoomSensitivity;
+                const prevScale = currentScale;
+                currentScale = Math.min(Math.max(0.4, currentScale + delta), 4);
+                
+                const rect = chartContainer.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                const ratio = currentScale / prevScale;
+                translateX = mouseX - (mouseX - translateX) * ratio;
+                translateY = mouseY - (mouseY - translateY) * ratio;
+
+                updateTransform();
+            };
+
+            // 触摸事件 (移动端)
+            chartContainer.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    startX = e.touches[0].clientX - translateX;
+                    startY = e.touches[0].clientY - translateY;
+                } else if (e.touches.length === 2) {
+                    isDragging = false;
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    initialDistance = Math.sqrt(dx * dx + dy * dy);
+                    initialScale = currentScale;
+                }
+            }, { passive: false });
+
+            chartContainer.addEventListener('touchmove', (e) => {
+                e.preventDefault(); // 防止滚动页面
+                if (e.touches.length === 1 && isDragging) {
+                    translateX = e.touches[0].clientX - startX;
+                    translateY = e.touches[0].clientY - startY;
+                    updateTransform();
+                } else if (e.touches.length === 2) {
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (initialDistance > 0) {
+                        const scaleDiff = distance / initialDistance;
+                        const prevScale = currentScale;
+                        currentScale = Math.min(Math.max(0.4, initialScale * scaleDiff), 4);
+                        
+                        const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                        const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                        const rect = chartContainer.getBoundingClientRect();
+                        const mouseX = centerX - rect.left;
+                        const mouseY = centerY - rect.top;
+                        
+                        const ratio = currentScale / prevScale;
+                        translateX = mouseX - (mouseX - translateX) * ratio;
+                        translateY = mouseY - (mouseY - translateY) * ratio;
+
+                        updateTransform();
+                    }
+                }
+            }, { passive: false });
+
+            chartContainer.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) {
+                    if (e.touches.length === 1) {
+                        isDragging = true;
+                        startX = e.touches[0].clientX - translateX;
+                        startY = e.touches[0].clientY - translateY;
+                    } else {
+                        isDragging = false;
+                    }
                 }
             });
-            
-            // In AstroChart, radix is inner, transit is outer
-            // Let's make Radix (user set) inner, Current as outer.
-            const radixChart = chart.radix(transitData);
-            radixChart.transit(radixData);
-            
-            // 转换我们计算的古典相位格式给 AstroChart 绘制连线
-            const astroChartAspects = aspects.map(a => ({
-                aspect: {
-                    name: a.type.name,
-                    degree: a.type.angle,
-                    color: a.type.name === 'conjunction' ? 'transparent' : 
-                           (a.type.name === 'square' || a.type.name === 'opposition' ? '#FF4500' : '#27AE60')
-                },
-                point: { name: a.p1.nameEn, position: a.p1.lon },
-                toPoint: { name: a.p2.nameEn, position: a.p2.lon },
-                precision: a.orb
-            }));
-            radixChart.aspects(astroChartAspects);
-        } else {
-            // Single chart
-            const astroChartAspects = aspects.map(a => ({
-                aspect: {
-                    name: a.type.name,
-                    degree: a.type.angle,
-                    color: a.type.name === 'conjunction' ? 'transparent' : 
-                           (a.type.name === 'square' || a.type.name === 'opposition' ? '#FF4500' : '#27AE60')
-                },
-                point: { name: a.p1.nameEn, position: a.p1.lon },
-                toPoint: { name: a.p2.nameEn, position: a.p2.lon },
-                precision: a.orb
-            }));
-            chart.radix(radixData).aspects(astroChartAspects);
-        }
 
-        // 设置缩放逻辑
-        const zoomSlider = document.getElementById('chart-zoom-slider');
-        if (zoomSlider) {
-            const currentScale = parseFloat(zoomSlider.value) || 1.25;
-            
-            // 立即应用初始缩放以防止第一次打开时 SVG 过大
-            const applyZoom = (scale) => {
-                const svg = chartContainer.querySelector('svg');
-                if (svg) {
-                    const oldWidth = parseFloat(svg.getAttribute('width')) || size;
-                    const newWidth = size * scale;
-                    svg.setAttribute('width', newWidth);
-                    svg.setAttribute('height', newWidth);
-                    const scrollDiff = (newWidth - oldWidth) / 2;
-                    chartContainer.scrollLeft += scrollDiff;
-                    chartContainer.scrollTop += scrollDiff;
-                }
-            };
-            
-            // AstroChart render is synchronous mostly, but use timeout just in case the SVG isn't fully injected
-            setTimeout(() => applyZoom(currentScale), 50);
-
-            zoomSlider.oninput = (e) => {
-                applyZoom(parseFloat(e.target.value));
-            };
-        }
-
-        // 添加鼠标/触摸拖拽移动功能
-        let isDragging = false;
-        let startX, startY, scrollLeft, scrollTop;
-
-        const startDrag = (e) => {
-            isDragging = true;
-            chartContainer.style.cursor = 'grabbing';
-            const pageX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
-            const pageY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
-            startX = pageX - chartContainer.offsetLeft;
-            startY = pageY - chartContainer.offsetTop;
-            scrollLeft = chartContainer.scrollLeft;
-            scrollTop = chartContainer.scrollTop;
-        };
-
-        const stopDrag = () => {
-            isDragging = false;
             chartContainer.style.cursor = 'grab';
-        };
-
-        const doDrag = (e) => {
-            if (!isDragging) return;
-            if (e.cancelable) e.preventDefault(); // 防止滚动页面
-            const pageX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
-            const pageY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
-            const x = pageX - chartContainer.offsetLeft;
-            const y = pageY - chartContainer.offsetTop;
-            const walkX = (x - startX) * 1.5; // 滚动速度
-            const walkY = (y - startY) * 1.5;
-            chartContainer.scrollLeft = scrollLeft - walkX;
-            chartContainer.scrollTop = scrollTop - walkY;
-        };
-
-        chartContainer.style.cursor = 'grab';
-        chartContainer.onmousedown = startDrag;
-        chartContainer.onmouseleave = stopDrag;
-        chartContainer.onmouseup = stopDrag;
-        chartContainer.onmousemove = doDrag;
-        
-        chartContainer.ontouchstart = startDrag;
-        chartContainer.ontouchend = stopDrag;
-        chartContainer.ontouchcancel = stopDrag;
-        chartContainer.ontouchmove = doDrag;
+        }, 100);
         
     } catch (err) {
         console.error("AstroChart Error:", err);
@@ -1473,6 +1824,9 @@ export function mountBazi() {
     if (UI.btnViewHoroscope && UI.horoscopeModal) {
         UI.btnViewHoroscope.addEventListener('click', () => {
             if (currentHoroscopeData) {
+                // Show modal first so we can calculate correct clientWidth
+                UI.horoscopeModal.classList.remove('hidden');
+                
                 renderAstroChart();
 
                 let html = '<div id="horoscope-data-grid" style="display: grid; gap: 8px; font-size: 0.85em;">';
@@ -1480,9 +1834,14 @@ export function mountBazi() {
                 // Houses
                 html += '<div class="data-panel" style="background: var(--bg-panel); padding: 8px; border-radius: 4px;"><h4 style="margin: 0 0 8px 0; color: var(--text-sub); font-size: 0.9em; border-bottom: 1px solid var(--border-lite);">宫位</h4>';
                 currentHoroscopeData.houses.forEach((h, i) => {
-                    html += `<div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 0.85em;">
-                        <span style="color: var(--text-sub);">第${i+1}宫</span>
-                        <span style="font-family: 'JetBrains Mono';">${h.icon}${h.str}</span>
+                    let houseName = `第${i+1}宫`;
+                    if (i === 0) houseName = 'ASC';
+                    if (i === 3) houseName = 'IC';
+                    if (i === 6) houseName = 'DSC';
+                    if (i === 9) houseName = 'MC';
+                    html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding: 6px 8px; font-size: 0.85em; background: rgba(150, 150, 150, 0.08); border: 1px solid var(--border-lite); border-radius: 6px;">
+                        <span style="color: var(--text-sub);">${houseName}</span>
+                        <span style="font-family: 'JetBrains Mono';">${window.styleZodiacIcon(h.icon)}${h.str}</span>
                     </div>`;
                 });
                 html += '</div>';
@@ -1496,39 +1855,64 @@ export function mountBazi() {
                 filteredPlanets.forEach(p => {
                     let speedStr = '';
                     if (p.speed < 0) speedStr = '<span style="color:#ef4444;">[R]</span>';
-                    html += `<div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 0.85em;">
+                    html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding: 6px 8px; font-size: 0.85em; background: rgba(150, 150, 150, 0.08); border: 1px solid var(--border-lite); border-radius: 6px;">
                         <span style="color: var(--text-sub);">${p.name}</span>
-                        <span style="font-family: 'JetBrains Mono';">${p.pos.icon}${p.pos.str}${speedStr}</span>
+                        <span style="font-family: 'JetBrains Mono';">${window.styleZodiacIcon(p.pos.icon)}${p.pos.str}${speedStr}</span>
                     </div>`;
                 });
                 html += '</div>';
+
+                // 底部分两列：左侧相位面板，右侧行星速度面板
+                html += `<div class="bottom-panels" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; margin-top: 8px;">`;
 
                 // Aspects
                 const showMinorAspects = document.getElementById('chart-show-minor-aspects')?.checked ?? false;
                 const aspects = calculateAspects(filteredPlanets, showMinorAspects);
                 const aspectNames = { 0: '合相', 30: '半六分', 60: '六分', 90: '四分', 120: '三分', 150: '梅花', 180: '对分' };
-                
-                const titleStr = showOuter ? '星盘相位 (容许度)' : '七星相位 (容许度)';
+                const titleStr = showOuter ? '星盘相位(容许度)' : '七星相位(容许度)';
                 html += `<div class="aspects-panel" style="background: var(--bg-panel); padding: 8px; border-radius: 4px;"><h4 style="margin: 0 0 8px 0; color: var(--text-sub); font-size: 0.9em; border-bottom: 1px solid var(--border-lite);">${titleStr}</h4>`;
                 if (aspects.length === 0) {
                     html += '<div style="color: var(--text-sub); font-size: 0.85em;">无主要相位</div>';
                 } else {
+                    const planetSymbolsMap = {
+                        '太阳': '☉', '月亮': '☽', '水星': '☿', '金星': '♀', '火星': '♂',
+                        '木星': '♃', '土星': '♄', '天王星': '♅', '海王星': '♆', '冥王星': '♇',
+                        '北交点': '☊', '莉莉丝': '⚸', '凯龙星': '⚷',
+                        'Sun': '☉', 'Moon': '☽', 'Mercury': '☿', 'Venus': '♀', 'Mars': '♂', 
+                        'Jupiter': '♃', 'Saturn': '♄', 'Uranus': '♅', 'Neptune': '♆', 'Pluto': '♇'
+                    };
                     aspects.forEach(a => {
                         const icon = a.type.symbol || '';
-                        const name = aspectNames[a.type.angle] || '';
+                        const p1Sym = planetSymbolsMap[a.p1.name] || planetSymbolsMap[a.p1.nameEn] || a.p1.name;
+                        const p2Sym = planetSymbolsMap[a.p2.name] || planetSymbolsMap[a.p2.nameEn] || a.p2.name;
                         const stateStr = a.isApplying ? '<span style="color:#3b82f6;">入</span>' : '<span style="color:#f59e0b;">出</span>';
-                        html += `<div style="display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 0.85em;">
-                            <span style="color: var(--text-sub);">${a.p1.name} ${icon} ${a.p2.name}</span>
-                            <span style="font-family: 'JetBrains Mono';">${stateStr} ${a.orb.toFixed(1)}°</span>
+                        html += `<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; padding: 6px 8px; font-size: 0.85em; background: rgba(150, 150, 150, 0.08); border: 1px solid var(--border-lite); border-radius: 6px;">
+                            <span style="color: var(--text-sub); white-space: nowrap; text-align: left; font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Arial Unicode MS', sans-serif;">${p1Sym} <span style="margin: 0 4px; opacity: 0.8; font-size: 0.9em;">${icon}</span> ${p2Sym}</span>
+                            <span style="font-family: 'JetBrains Mono'; white-space: nowrap;">${stateStr} ${a.orb.toFixed(1)}°</span>
                         </div>`;
                     });
                 }
                 html += '</div>';
                 
+                // 行星速度面板
+                html += `<div class="speed-panel" style="background: var(--bg-panel); padding: 8px; border-radius: 4px;"><h4 style="margin: 0 0 8px 0; color: var(--text-sub); font-size: 0.9em; border-bottom: 1px solid var(--border-lite); padding-bottom: 4px;">行星速度</h4>`;
+                const realPlanets = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'];
+                const speedSortedPlanets = [...filteredPlanets].filter(p => realPlanets.includes(p.nameEn)).sort((a, b) => Math.abs(b.speed) - Math.abs(a.speed));
+                speedSortedPlanets.forEach(p => {
+                    const speedStr = (p.speed >= 0 ? '+' : '') + p.speed.toFixed(3) + '°/d';
+                    const colorSpeed = p.speed < 0 ? '#ef4444' : 'var(--text-sub)';
+                    html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding: 6px 8px; font-size: 0.85em; background: rgba(150, 150, 150, 0.08); border: 1px solid var(--border-lite); border-radius: 6px;">
+                        <span style="color: var(--text-sub);">${p.name}</span>
+                        <span style="font-family: 'JetBrains Mono'; color: ${colorSpeed};">${speedStr}</span>
+                    </div>`;
+                });
+                html += '</div>';
+
+                html += '</div>'; // End grid
+                
                 html += '</div>';
                 
                 UI.horoscopeDataContainer.innerHTML = html;
-                UI.horoscopeModal.classList.remove('hidden');
             } else {
                 alert('星盘数据尚未加载完成，请稍候');
             }
@@ -1594,5 +1978,5 @@ export function mountBazi() {
     });
 
     updateAll();
-    console.log("Module: Bazi Pro (Combined Logic) Mounted");
+    console.log("Module: Lingshu Pro (Combined Logic) Mounted");
 }

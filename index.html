@@ -287,12 +287,14 @@
             
             <!-- 星盘弹窗 -->
             <div id="horoscope-modal" class="modal hidden">
-                <div class="modal-content" style="max-width: 800px; width: 98%; max-height: 95vh; overflow-y: auto; padding: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
-                        <h3 style="margin: 0; color: var(--text-main); font-size: 1.1em;">当前星盘 (Regiomontanus)</h3>
-                        <div style="display: flex; gap: 8px;">
-                            <button id="btn-toggle-radix" class="btn-outline" style="padding: 4px 8px; font-size: 0.8em; width: auto;">设置外圈</button>
-                            <button id="btn-close-horoscope" class="btn-outline" style="padding: 4px 12px; font-size: 1.1em; width: auto; line-height: 1;">×</button>
+                <div class="modal-content" style="max-width: 1200px; width: 98%; max-height: 95vh; overflow-y: auto; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px;">
+                        <div style="margin: 0; color: var(--text-main); font-size: 0.85rem; line-height: 1.1; font-family: 'Song', serif; font-weight: bold; text-align: left;">
+                            当前星盘 <span style="font-size: 0.8em; font-weight: normal; color: var(--text-sub);">(Regiomontanus)</span>
+                        </div>
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <button id="btn-toggle-radix" class="btn-outline" style="padding: 2px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border-color); width: auto; line-height: 1; background: transparent; cursor: pointer; color: var(--text-main); white-space: nowrap; flex-shrink: 0;">外圈</button>
+                            <button id="btn-close-horoscope" class="btn-outline" style="padding: 0; width: 20px; height: 20px; font-size: 14px; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid var(--border-color); color: var(--text-sub); background: transparent; cursor: pointer;">✕</button>
                         </div>
                     </div>
                     
@@ -326,12 +328,8 @@
 
                     <!-- 响应式布局容器 -->
                     <div class="horoscope-layout" style="display: flex; flex-direction: column; gap: 12px;">
-                        <!-- 缩放控制 -->
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 0.85em; color: var(--text-secondary);">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span>缩放星盘:</span>
-                                <input type="range" id="chart-zoom-slider" min="0.5" max="2" step="0.1" value="1.25" style="width: 150px;">
-                            </div>
+                        <!-- 控制面板 -->
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 0.75em; color: var(--text-secondary);">
                             <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                                 <input type="checkbox" id="chart-show-outer"> 显示三王星
                             </label>
